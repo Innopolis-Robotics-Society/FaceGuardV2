@@ -1,0 +1,14 @@
+fail = true
+
+verbose = true
+
+include_verbatim = true
+
+exclude = [
+  #tg links can break the logic
+  'https://t\.me/.*',
+
+  # local adresses that are not reachable from GitHub
+  'http://localhost:.*',
+  'http://127\.0\.0\.1:.*'
+]
