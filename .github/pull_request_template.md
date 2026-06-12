@@ -1,9 +1,9 @@
-## What is done
-- 
+## Summary of changes
 
-## How it was tested
-- 
 
-## Reviewer's checklist
+## Testing performed
+
+
+## Reviewer checklist
 - [ ] The changes do not break the existing functionality
 - [ ] There are no secrets or passwords in the code
