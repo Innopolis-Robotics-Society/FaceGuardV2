@@ -1,5 +1,7 @@
 verbose = "info"
 
+hidden = true
+
 include_verbatim = true
 
 exclude = [

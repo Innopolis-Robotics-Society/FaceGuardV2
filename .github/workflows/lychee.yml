@@ -17,5 +17,6 @@ jobs:
         uses: lycheeverse/lychee-action@v2
         with:
           args: --config lychee.toml .
+          failIfEmpty: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
