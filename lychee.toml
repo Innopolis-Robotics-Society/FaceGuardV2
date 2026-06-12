@@ -1,4 +1,4 @@
-verbose = true
+verbose = "info"
 
 include_verbatim = true
 
