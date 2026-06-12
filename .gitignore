@@ -13,7 +13,11 @@ env/
 *.sqlite
 *.sqlite3
 
-# Logs
+# Generated / Logs
+output/
+outputs/
+temp/
+tmp/
 *.log
 logs/
 
@@ -21,3 +25,50 @@ logs/
 .vscode/
 .idea/
 *.iml
+
+
+# Media / Recordings / Large binaries
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.wav
+*.mp3
+*.aac
+*.flac
+*.ogg
+*.m4a
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+*.gif
+*.webp
+*.raw
+
+# Datasets & archives
+data/
+dataset/
+datasets/
+*.csv
+*.tsv
+*.jsonl
+*.parquet
+*.zip
+*.tar
+*.tar.gz
+*.gz
+*.rar
+*.7z
+
+# Auto-downloaded models & cache
+.insightface/
+~/.insightface/
+
+# Model formats
+*.onnx
+*.pth
+*.pkl
+*.bin
