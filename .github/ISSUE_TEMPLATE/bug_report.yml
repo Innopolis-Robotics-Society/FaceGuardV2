@@ -1,0 +1,82 @@
+name: "🐛 Bug Report"
+description: "Report something that is broken or not working as expected"
+title: "[BUG]: <Brief Description>"
+labels: ["bug", "pbi"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🐛 Bug Report Template
+        Please provide detailed information to help reproduce and fix the issue.
+
+  - type: textarea
+    id: problem_description
+    attributes:
+      label: "Problem Description"
+      placeholder: "A clear and concise description of what the bug is."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repo_steps
+    attributes:
+      label: "Reproduction Steps"
+      placeholder: |
+        Steps to reproduce the behavior:
+        1. Go to '...'
+        2. Click on '....'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: "Expected Behavior"
+      placeholder: "A clear and concise description of what you expected to happen."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: "Actual Behavior"
+      placeholder: "What actually happens (include error logs, hardware outputs, or error categories)."
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Environment"
+      placeholder: "OS (Windows/Ubuntu), Architecture (x86/ARM64 Raspberry Pi 5), InsideFace/OpenCV versions, emulator or hardware mode"
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix_acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria for the Fix"
+      placeholder: "What specific and testable conditions must be met to consider this bug successfully resolved?"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "---"
+
+  - type: input
+    id: implementer
+    attributes:
+      label: "Implementer (GitHub Username)"
+      placeholder: "@username of the person fixing the bug"
+    validations:
+      required: true
+
+  - type: input
+    id: reviewer
+    attributes:
+      label: "Reviewer (GitHub Username)"
+      placeholder: "@username of a DIFFERENT team member who will verify the fix"
+    validations:
+      required: true

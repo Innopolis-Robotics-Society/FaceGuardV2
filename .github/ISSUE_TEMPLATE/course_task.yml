@@ -1,0 +1,35 @@
+name: "🎓 Course Task"
+description: "Track assignment deliverables, reports, and university checkpoints"
+title: "[Task]: <Checkpoint Name>"
+labels: ["course-task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🎓 Course Task Template
+        **Important:** Course Tasks are tracked work whose primary purpose is course reporting, grading evidence, or submission packaging. 
+        *They are NOT PBIs and do not count toward any assignment product backlog-size minimums.*
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      placeholder: "Describe the specific administrative requirements of the course assignment or checkpoint..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "Expected Evidence or Deliverable"
+      placeholder: "e.g., Link to PDF report under reports/, Moodle submission confirmation, or video presentation link."
+    validations:
+      required: true
+
+  - type: input
+    id: assignee_name
+    attributes:
+      label: "Responsible Team Member"
+      placeholder: "@username of the person compiling this report/submission"
+    validations:
+      required: false

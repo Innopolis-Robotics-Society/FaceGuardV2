@@ -1,0 +1,61 @@
+name: "⚙️ Other PBI"
+description: "Create a technical task, refactoring, spike, or infrastructure issue"
+title: "[PBI]: <Brief Title>"
+labels: ["technical-task", "pbi"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### ⚙️ Product Backlog Item Template
+        Use this form for technical, infrastructure, refactoring, or research tasks that improve the product repository.
+
+  - type: dropdown
+    id: pbi_type
+    attributes:
+      label: "Issue Type"
+      description: "Select the nature of this Product Backlog Item"
+      options:
+        - "Technical Debt"
+        - "Refactoring"
+        - "Spike / Research"
+        - "Documentation"
+        - "DevOps / CI-CD"
+        - "Hardware Setup"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      placeholder: "Clearly describe the technical task, goals, and why it needs to be done..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      placeholder: "What specific, observable, and testable conditions must be achieved for this task to be considered Done?"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "---"
+
+  - type: input
+    id: implementer
+    attributes:
+      label: "Implementer (GitHub Username)"
+      placeholder: "@username of the person responsible for doing the work"
+    validations:
+      required: true
+
+  - type: input
+    id: reviewer
+    attributes:
+      label: "Reviewer (GitHub Username)"
+      placeholder: "@username of a DIFFERENT team member responsible for reviewing the work"
+    validations:
+      required: true
