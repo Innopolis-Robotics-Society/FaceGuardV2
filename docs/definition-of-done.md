@@ -1,48 +1,41 @@
-# Definition of Done (DoD) — FaceGuardV2
+# Definition of Done (DoD)
 
-Настоящий документ определяет минимальные стандарты качества кодовой базы, документации и процессов верификации, обязательные для всех участников команды. Задача (PBI) считается полностью завершенной и может быть переведена в статус `Done` только при одновременном выполнении её индивидуальных критериев приемки (Acceptance Criteria) и всех применимых пунктов данного Definition of Done.
+This document defines the shared minimum completion standard for all Product Backlog Items (PBIs) in the FaceGuardV2 repository. A PBI may be marked `Done` only when both its issue-specific acceptance criteria and this team Definition of Done are satisfied.
 
----
+## 1. Implementation & Code Quality
+- [ ] The code is written, successfully compiles/builds, and addresses the specific requirements of the PBI.
+- [ ] The code has been committed to an issue-linked branch following the naming format: `<issue-number>-short-description`.
+- [ ] No secrets, passwords, or sensitive data are included in the code.
 
-## 1. Общие критерии для всех элементов бэклога (Supporting PBIs & Bugs)
+## 2. Testing & Verification
+- [ ] All issue-specific Acceptance Criteria defined in the PBI are satisfied.
+- [ ] The changes do not break existing functionality.
+- [ ] Verification evidence is preserved in the PR/MR (e.g., screenshots, test output, or logs).
 
-Любая техническая задача (Technical Debt, Refactoring, Spike), баг-репорт или инфраструктурная задача считается выполненной (`Done`) только тогда, когда:
+## 3. Review & Workflow Integration
+- [ ] A Pull Request (PR/MR) has been created using the extended PR template.
+- [ ] The work has been reviewed by at least one other team member (different from the implementer).
+# Definition of Done (DoD)
 
-### 🛠️ Разработка и качество кода
-- **Реализация функционала:** Код полностью реализует заявленные требования, индивидуальные критерии приемки задачи выполнены и проверены.
-- **Стандарты кодирования:** Код написан на Python в соответствии со стандартом PEP 8, снабжен понятным именованием переменных, функций и документацией (docstrings) для сложных модулей (OpenCV/InsideFace пайплайны).
-- **Отсутствие секретов:** Из кода полностью исключены любые реальные пароли, API-ключи, токены доступа и личные персональные данные (PII). Все конфигурации вынесены в переменные окружения, а демонстрационные переменные зафиксированы в `.env.example`.
-- **Чистота репозитория:** В историю Git не попали временные файлы, тяжелые бинарные файлы, локальные датасеты и веса обученных моделей (все они надежно заблокированы в `.gitignore`).
+This document defines the shared minimum completion standard for all Product Backlog Items (PBIs) in the FaceGuardV2 repository. A PBI may be marked `Done` only when both its issue-specific acceptance criteria and this team Definition of Done are satisfied.
 
-### 🧪 Тестирование и проверка
-- **Локальное тестирование:** Разработчик проверил работу кода локально (в режиме эмуляции на x86 или на целевом железе Raspberry Pi 5).
-- **Автоматические проверки:** Все настроенные CI/CD проверки (включая проверку ссылок утилитой Lychee во всех `.md` файлах репозитория, включая папку `reports/`) успешно пройдены и горят зеленым.
+## 1. Implementation & Code Quality
+- [ ] The code is written, successfully compiles/builds, and addresses the specific requirements of the PBI.
+- [ ] The code has been committed to an issue-linked branch following the naming format: `<issue-number>-short-description`.
+- [ ] No secrets, passwords, or sensitive data are included in the code.
 
-### 👥 Ревью кода и слияние (Merge)
-- **Независимое ревью:** Код проверен как минимум одним другим участником команды (Reviewer), отличным от автора (Implementer). Самостоятельный аппрув собственных PR/MR строго запрещен.
-- **Интеграция в main:** Пулл-реквест успешно одобрен и влит в защищенную ветку `main` исключительно с использованием классического коммита слияния (Merge Commit). Использование Squash и Rebase запрещено настройками ветки.
+## 2. Testing & Verification
+- [ ] All issue-specific Acceptance Criteria defined in the PBI are satisfied.
+- [ ] The changes do not break existing functionality.
+- [ ] Verification evidence is preserved in the PR/MR (e.g., screenshots, test output, or logs).
 
-### 📝 Документирование и учет изменений
-- **Ведение Changelog:** Если изменения видны конечному пользователю системы, в корневом файле `CHANGELOG.md` в секции `[Unreleased]` создана соответствующая issue-linked запись (в категориях Added, Changed, Fixed и т.д.).
-- **Сохранение свидетельств:** Ссылка на PR/MR, скриншоты или логи, подтверждающие успешное тестирование, прикреплены к закрываемой задаче для обеспечения полной трассируемости.
+## 3. Review & Workflow Integration
+- [ ] A Pull Request (PR/MR) has been created using the extended PR template.
+- [ ] The work has been reviewed by at least one other team member (different from the implementer).
+- [ ] The PR/MR has received explicit approval from the reviewer.
+- [ ] For supporting or implementation PBIs, the issue-linked PR/MR is successfully merged into the protected default branch (main).
 
----
-
-## 2. Специальные критерии для Пользовательских Историй (User Stories)
-
-Пользовательская история (**User Story**) обладает собственным жизненным циклом и не является прямым контейнером для коммитов. Карточка User Story переводится в статус `Done` только при выполнении следующих условий:
-
-1. **Завершение всех связанных PBIs:** Все дочерние и связанные технические задачи (разработка БД, написание OpenCV скриптов, интеграция InsideFace, верстка интерфейса, настройка GPIO), созданные для реализации этой истории, успешно прошли свое собственное DoD, влиты в `main` и закрыты.
-2. **Выполнение критериев удовлетворения (Acceptance Criteria):** Все высокоуровневые сценарии поведения системы (включая негативные сценарии и liveness detection), описанные в User Story в формате Given-When-Then, успешно воспроизводятся и выполняются на целевом или эмулируемом окружении.
-3. **Обновление индекса требований:** В авторитетном реестре требований `docs/user-stories.md` для данной истории обновлен её текущий статус исполнения, подтверждающий её готовность в рамках текущего Спринта.
-4. **Отсутствие незавершенных подзадач:** Никакая User Story не может быть закрыта, если остались нереализованные технические аспекты, влияющие на её работоспособность.
-
----
-
-## 3. Критерии для Учебных Задач (Course Tasks)
-
-Учебные задачи (подготовка отчетов в `reports/`, отправка контрольных точек в Moodle) не являются элементами бэклога продукта (PBIs). Для них действует отдельное мини-DoD:
-- Отчет оформлен в формате Markdown, сохранен в соответствующую поддиректорию папки `reports/`.
-- Все внутренние (относительные) и внешние ссылки в документе валидны и успешно проходят валидацию Lychee CI.
-- Из публичного текста отчета удалены все реальные имена участников команды и заказчика (заменены на GitHub-никнеймы или роли).
-- Факт сдачи зафиксирован ссылкой на платформу Moodle или прикрепленным файлом отчета.
+## 4. Documentation & Traceability
+- [ ] The root `CHANGELOG.md` is updated with all user-visible changes, new features, or bug fixes.
+- [ ] Relevant documentation (`docs/interface.md`, `README.md`, etc.) is updated if the interface, architecture, or setup instructions have changed.
+- [ ] For User Story PBIs: All linked supporting PBIs required to satisfy the story's acceptance criteria are reviewed, merged, verified, and marked `Done`.
