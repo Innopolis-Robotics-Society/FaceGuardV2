@@ -1,0 +1,72 @@
+name: User Story
+description: A product backlog item expressed as a user story
+labels: ["type: user story"]
+
+body:
+  - type: input
+    id: story_id
+    attributes:
+      label: Story ID
+      placeholder: US-01
+    validations:
+      required: true
+
+  - type: dropdown
+    id: moscow
+    attributes:
+      label: MoSCoW Priority
+      options: [Must Have, Should Have, Could Have, Won't Have]
+    validations:
+      required: true
+
+  - type: input
+    id: role
+    attributes:
+      label: As a...
+      placeholder: lab worker
+    validations:
+      required: true
+
+  - type: input
+    id: action
+    attributes:
+      label: I want to...
+      placeholder: unlock the door automatically when my face is recognized
+    validations:
+      required: true
+
+  - type: input
+    id: value
+    attributes:
+      label: So that...
+      placeholder: I can enter without access cards
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes and Constraints
+      placeholder: Any additional context, constraints, or technical notes
+
+  - type: textarea
+    id: ac
+    attributes:
+      label: Acceptance Criteria
+      placeholder: |
+        - [ ] Given ... When ... Then ...
+        - [ ] Given ... When ... Then ...
+    validations:
+      required: true
+
+  - type: input
+    id: implementer
+    attributes:
+      label: Implementer
+      placeholder: "@username"
+
+  - type: input
+    id: reviewer
+    attributes:
+      label: Reviewer
+      placeholder: "@username"

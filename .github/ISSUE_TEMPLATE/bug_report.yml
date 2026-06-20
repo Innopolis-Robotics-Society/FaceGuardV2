@@ -1,0 +1,66 @@
+name: Bug Report
+description: Report a defect or unexpected behaviour
+labels: ["type: bug"]
+
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      placeholder: What is broken?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Step one
+        2. Step two
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, Python version, commit SHA, camera model..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: ac
+    attributes:
+      label: Acceptance Criteria for the Fix
+      placeholder: |
+        - [ ] Given ... When ... Then ...
+    validations:
+      required: true
+
+  - type: input
+    id: implementer
+    attributes:
+      label: Implementer
+      placeholder: "@username"
+
+  - type: input
+    id: reviewer
+    attributes:
+      label: Reviewer
+      placeholder: "@username"
