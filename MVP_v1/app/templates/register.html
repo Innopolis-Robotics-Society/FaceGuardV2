@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Register — FaceGuard{% endblock %}
+
+{% block content %}
+<header>
+  <h2>Register a new person</h2>
+  <p class="muted">
+    The Pi camera will capture {{ frame_count }} frames in real time and
+    average their embeddings before saving. Make sure the person is
+    facing the camera before submitting.
+  </p>
+</header>
+
+<div class="grid">
+  <section>
+    <h3>Live preview</h3>
+    <div class="video-wrap">
+      <img id="camera-feed" src="/stream" alt="Live camera stream">
+    </div>
+    <p class="muted small">Preview only — actual frames are captured server-side.</p>
+  </section>
+
+  <aside>
+    <h3>Registration form</h3>
+    <form id="register-form"
+          hx-post="/register"
+          hx-target="#register-result"
+          hx-swap="innerHTML"
+          hx-disabled-elt="#submit-btn">
+      <label>
+        Full name (Surname Firstname)
+        <input type="text" name="name" required
+               placeholder="e.g. Ivanov Petr">
+      </label>
+
+      <fieldset>
+        <legend>Access type</legend>
+        <label>
+          <input type="radio" name="access_type" value="permanent" checked
+                 hx-get="/register/options/permanent" hx-target="#guest-options"
+                 hx-swap="innerHTML">
+          Permanent
+        </label>
+        <label>
+          <input type="radio" name="access_type" value="temporary"
+                 hx-get="/register/options/temporary" hx-target="#guest-options"
+                 hx-swap="innerHTML">
+          Temporary
+        </label>
+      </fieldset>
+
+      <div id="guest-options"></div>
+
+      <button id="submit-btn" type="submit">Capture &amp; register</button>
+      <small class="muted">
+        Captures {{ frame_count }} frames at ~0.4s intervals. The form will
+        be disabled for ~2 seconds.
+      </small>
+    </form>
+
+    <div id="register-result"></div>
+  </aside>
+</div>
+{% endblock %}

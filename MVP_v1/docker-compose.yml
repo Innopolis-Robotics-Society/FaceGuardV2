@@ -1,0 +1,43 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: faceguard-backend:latest
+    container_name: faceguard-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Persistent SQLite DB lives here. Survives container rebuilds.
+      - ./data:/data
+    depends_on:
+      - ml
+    networks:
+      - faceguard
+
+  ml:
+    # ---- Real ML service (replace with your team's image) ----
+    # image: faceguard-ml:latest
+    # ---------------------------------------------------------
+    # For local development we use the stub shipped in this repo.
+    build:
+      context: .
+      dockerfile: Dockerfile.ml-stub
+    image: faceguard-ml-stub:latest
+    container_name: faceguard-ml
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    # On real Pi: pass the camera device through. Uncomment when switching
+    # to the real ML service.
+    # devices:
+    #   - /dev/video0:/dev/video0
+    networks:
+      - faceguard
+
+networks:
+  faceguard:
+    driver: bridge

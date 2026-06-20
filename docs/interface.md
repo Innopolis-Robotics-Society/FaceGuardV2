@@ -2,62 +2,64 @@
 
 ## Overview
 
-FaceGuard has two interfaces:
+FaceGuard exposes two interfaces. As of MVP v1, the **Web Admin UI** replaces
+the CLI design documented in earlier sprints.
 
-| Interface | Type | User | Status |
-|-----------|------|------|--------|
-| **Live Display** | Graphical (OpenCV window) | All users (employees, guests) | Implemented in MVP v0 |
-| **Admin CLI** | Command-line | System administrators | Planned for production |
+| Interface     | Type        | User             | Status in MVP v1        |
+|---------------|-------------|------------------|-------------------------|
+| **Live Display**  | Web (MJPEG + SSE) | Employees, guests   | Implemented             |
+| **Admin Web UI**  | Web (HTML + HTMX) | System administrators | Implemented (MVP v1)    |
+| ~~Admin CLI~~     | ~~CLI~~           | ~~Administrators~~  | **Replaced by Web Admin** |
+
+The CLI design (`register`, `remove`, `list`, `add-guest`, `logs`, `status`,
+`threshold`) has been superseded by the web admin — every CLI action now
+has an equivalent page (see mapping table below).
 
 ---
 
-## 1. Live Display (OpenCV Window)
+## 1. Live Display (Web)
 
-Real-time camera feed shown during system operation. No user input required — the user simply stands in front of the camera.
+The live camera feed and verdict overlay shown to anyone standing in front
+of the door. The same MJPEG stream is also embedded in the admin dashboard
+so the admin can see what the camera sees from their laptop.
+
+**URL (admin view):** `/` (dashboard, requires login)
 
 ### States
 
-#### 1.1 Locked (no face detected)
-- Solid red border around frame
-- Text: `LOCKED`
-- No action required; system waits
+The verdict overlay reflects the current state of the recognition loop.
+
+#### 1.1 Idle (no face detected)
+
+- **Overlay colour:** grey
+- **Text:** `Waiting for face...`
+- Door stays locked, servo idle.
 
 ```
 ┌─────────────────────┐
 │  [Camera feed]      │
 │                     │
-│      LOCKED         │
 │                     │
 └─────────────────────┘
-      (red border)
+   Waiting for face...
+        (grey)
 ```
 
-*[Screenshot: locked_state.png]*
+#### 1.2 Scanning (face detected, comparison in flight)
 
-#### 1.2 Scanning (face detected, processing)
-- Yellow border
-- Text: `Scanning...`
-- Progress indicator (dots cycling)
+- **Overlay colour:** yellow
+- **Text:** `Scanning...`
+- Brief — lasts one recognition tick (≤ `RECOGNITION_INTERVAL_MS`).
 
-```
-┌─────────────────────┐
-│  [Camera feed]      │
-│   ┌─────────┐       │
-│   │  face   │       │
-│   └─────────┘       │
-│    Scanning...      │
-│                     │
-└─────────────────────┘
-     (yellow border)
-```
+#### 1.3 Granted (known user / guest)
 
-*[Screenshot: scanning_state.png]*
-
-#### 1.3 Recognized (known user)
-- Green border
-- Text: `{name} — {score:.2f}`
-- Large `UNLOCKED` banner for 0.5s
-- Servo rotates (emulated as banner on laptop, real hardware on Pi)
+- **Overlay colour:** green
+- **Text:** `Access granted: {Name}`
+- **Meta:** `{access_type} · score {score:.3f}`
+- Door status flips to "Open".
+- Servo rotates to the open position for `SERVO_OPEN_DURATION_SEC`, then
+  returns. On x86 (no GPIO), the servo state is reflected in the status
+  panel as "Triggered (open)".
 
 ```
 ┌─────────────────────┐
@@ -65,19 +67,19 @@ Real-time camera feed shown during system operation. No user input required — 
 │   ┌─────────┐       │
 │   │  face   │       │
 │   └─────────┘       │
-│   Vasya — 0.82      │
-│    UNLOCKED         │
-│                     │
+│  Access granted:    │
+│  Ivanov Petr        │
+│  user · 0.821       │
 └─────────────────────┘
-     (green border)
+        (green)
 ```
 
-*[Screenshot: recognized_state.png]*
+#### 1.4 Denied (face seen but no match above threshold)
 
-#### 1.4 Unknown (face detected, not in database)
-- Orange border
-- Text: `Unknown — {score:.2f}`
-- Door remains locked
+- **Overlay colour:** red
+- **Text:** `Access denied: Unknown`
+- **Meta:** `score {best:.3f}`
+- Door stays locked. Audit log entry written (`success=false`).
 
 ```
 ┌─────────────────────┐
@@ -85,135 +87,160 @@ Real-time camera feed shown during system operation. No user input required — 
 │   ┌─────────┐       │
 │   │  face   │       │
 │   └─────────┘       │
-│   Unknown — 0.34    │
-│                     │
+│  Access denied:     │
+│  Unknown            │
+│  score 0.312        │
 └─────────────────────┘
-    (orange border)
+        (red)
 ```
 
-*[Screenshot: unknown_state.png]*
+#### 1.5 Error (ML service unreachable / loop crashed)
 
-#### 1.5 Error (camera failure, model load error)
-- Flashing red border
-- Text: `Error: {message}`
-- System halts or retries
-
-```
-┌─────────────────────┐
-│  [Camera feed]      │
-│                     │
-│  Error: No camera   │
-│                     │
-└─────────────────────┘
-  (flashing red border)
-```
-
+- **Overlay colour:** dark red
+- **Text:** `System error`
+- **Meta:** short diagnostic (e.g. `ML service unreachable`)
+- Status panel shows `ML service: Offline`.
 
 ---
 
-## 2. Admin CLI
+## 2. Admin Web UI
 
-Planned interface for user management, registration, and system maintenance. Not implemented in MVP v0; documented for production deployment.
+Accessible from any device on the same LAN as the Raspberry Pi.
+**URL:** `http://<pi-ip>:8000/`
 
-### Commands
+### 2.1 Authentication
 
-#### `register <name>`
-Register a new user from camera.
+- Login form at `/login`.
+- Single admin account bootstrapped from env on first startup
+  (`ADMIN_USERNAME` / `ADMIN_PASSWORD`).
+- Password stored bcrypt-hashed in SQLite (`admins` table).
+- Session cookie (`faceguard_session`), 12h expiry.
 
-```
-$ faceguard register "Ivan Petrov"
-Position face in frame. Capturing 5 samples...
-[#####] Done.
-User "Ivan Petrov" registered. Embedding saved.
-```
+### 2.2 Dashboard — `/`
 
-#### `remove <name>`
-Remove user or guest.
+- Live camera feed (MJPEG from ML service, proxied through backend).
+- Verdict overlay (see Live Display section above).
+- Status panel:
+  - ML service health (online / offline)
+  - Door state (locked / open)
+  - Last recognized user + score
+  - Counts: permanent users, active guests, total log entries
+  - Servo state
+- Updates pushed via SSE (`/status/events`) — no polling.
 
-```
-$ faceguard remove "Ivan Petrov"
-User removed.
-```
+### 2.3 Users & Guests — `/users`
 
-#### `list`
-Show all active users and guests.
+Lists permanent users and active (non-expired) guests with delete/revoke
+buttons. Each row shows ID, name, and either `created_at` (users) or
+`expires_at` (guests).
 
-```
-$ faceguard list
+Expired guests are auto-purged inside the recognition loop — no manual
+cleanup needed, but a `Purge expired` button is available for forced cleanup.
 
-PERMANENT USERS:
-  Ivan Petrov      | since 2026-06-01
-  Maria Sidorova   | since 2026-06-03
+### 2.4 Register a new person — `/register`
 
-TEMPORARY GUESTS:
-  Courier #5       | expires 2026-06-12 18:00 | added by admin_dmitry
-  Visitor Ivanov   | expires 2026-06-12 15:00 | added by admin_dmitry
-```
+The admin-side counterpart of US-02.
 
-#### `add-guest <name> --hours <N>`
-Add temporary access.
+**Steps:**
 
-```
-$ faceguard add-guest "Courier #5" --hours 8
-Guest registered. Expires: 2026-06-12 18:00
-```
+1. The page shows a live camera preview (left panel).
+2. Admin fills the form:
+   - **Full name** (`Surname Firstname`) — unique among permanent users.
+   - **Access type**:
+     - `Permanent` — never expires.
+     - `Temporary` — additional field `Valid for (days)` appears (HTMX swap).
+3. Admin clicks **Capture & register**.
+4. The backend captures `REGISTRATION_FRAME_COUNT` (default 5) frames from
+   the ML service at `REGISTRATION_FRAME_INTERVAL_MS` intervals. For each
+   frame the biggest detected face's embedding is taken.
+5. The 5 embeddings are averaged and L2-normalized.
+6. The result is saved as a `users` row (permanent) or a `guests` row
+   (temporary, with `expires_at = now + N days`).
+7. A success/error message is swapped in via HTMX — no page reload.
 
-#### `logs [--today] [--user <name>]`
-View access logs.
+**Failure modes shown to the admin:**
 
-```
-$ faceguard logs --today
-14:32 | Vasya          | user  | score 0.82 | OK
-14:45 | Unknown        | -     | score 0.34 | DENIED
-15:01 | Visitor Ivanov | guest | score 0.71 | OK
-15:23 | Courier #5     | guest | score 0.69 | OK
-```
+- Name already exists → `User '<name>' already exists.`
+- No face in one of the frames → `No face detected on frame N/5.`
+- ML service unreachable → `ML service error on frame N: ...`
 
-#### `status`
-System health check.
+### 2.5 Logs — `/logs`
 
-```
-$ faceguard status
-Camera: OK
-Model: buffalo_m loaded
-Database: 12 users, 3 active guests
-Uptime: 4h 23m
-Last recognition: 15:23 (Courier #5)
-```
+Audit log (US-10). Each row records:
 
-#### `threshold <value>`
-Update recognition threshold (runtime).
+| Field        | Source                          |
+|--------------|---------------------------------|
+| timestamp    | when the attempt happened       |
+| name         | matched name, or `Unknown`      |
+| access_type  | `user` / `guest` / `unknown`    |
+| score        | cosine similarity, `0..1`       |
+| success      | `true` if access was granted    |
 
-```
-$ faceguard threshold 0.65
-Threshold updated: 0.60 → 0.65
-```
+Filters:
 
-### Error Examples
+- **Filter by name** — substring match (e.g. `Ivan` matches `Ivanov`).
+- **Today only** — restrict to today's attempts.
 
-```
-$ faceguard register "Vasya"
-Error: User "Vasya" already exists. Use `remove` first.
+### 2.6 Settings — runtime threshold (US-08)
 
-$ faceguard add-guest "Temp" --hours 48
-Error: Max guest duration is 24 hours.
-
-$ faceguard remove "Nonexistent"
-Error: User not found.
-```
+The recognition threshold is read from env at startup (`THRESHOLD`).
+A runtime-adjustable threshold UI is planned for v2; for MVP v1 the
+threshold is configured via `.env` / Docker env.
 
 ---
 
-## 3. Interface Comparison
+## 3. CLI → Web admin mapping
 
-| Aspect | Live Display | Admin CLI |
-|--------|-------------|-----------|
-| **User** | Employee, guest | System admin |
-| **Input** | None (passive) | Typed commands |
-| **Output** | Visual feedback | Text tables |
-| **Location** | Raspberry Pi + camera | SSH / local terminal |
-| **Authentication** | Biometric (face) | SSH key / system user |
-| **MVP v0** | Implemented | Documented, not implemented |
+The CLI commands documented in earlier sprints have the following web
+equivalents in MVP v1:
 
+| Old CLI command              | Web admin equivalent                          |
+|------------------------------|-----------------------------------------------|
+| `register <name>`            | `/register` form (permanent access)           |
+| `add-guest <name> --hours N` | `/register` form (temporary access, days)     |
+| `remove <name>`              | Delete button on `/users`                     |
+| `list`                       | `/users` page                                 |
+| `logs [--today] [--user X]`  | `/logs` page (same filters)                   |
+| `status`                     | Dashboard right panel (`/`)                   |
+| `threshold <value>`          | `.env: THRESHOLD` (runtime UI planned v2)     |
 
+---
 
+## 4. Interface comparison
+
+| Aspect            | Live Display              | Admin Web UI                  |
+|-------------------|---------------------------|-------------------------------|
+| User              | Employee, guest           | System admin                  |
+| Input             | None (passive)            | Forms, buttons (HTMX)         |
+| Output            | MJPEG + verdict overlay   | HTML pages, SSE updates       |
+| Location          | Pi + camera               | Any LAN device, browser       |
+| Authentication    | Biometric (face)          | Username + password (session) |
+| Latency           | Real-time (≤ 500ms tick)  | On-demand                     |
+| MVP v1            | ✓                          | ✓                             |
+
+---
+
+## 5. Hardware feedback (servo + LED)
+
+### Servo (US-06 / US-07)
+
+- On **Raspberry Pi** (`SERVO_MODE=gpio`): backend drives the servo via
+  `gpiozero.AngularServo` on `SERVO_PIN`. On access granted, the servo
+  rotates to 90° for `SERVO_OPEN_DURATION_SEC`, then returns to 0°.
+- On **x86 laptops** (`SERVO_MODE=emulated`): no hardware. The status panel
+  on the dashboard shows `Servo: Triggered (open)` for the same duration,
+  replicating the timing of the physical actuator.
+
+### LED indicators (planned for v2)
+
+Customer-requested LED feedback (green=granted, red=denied, yellow=scanning)
+is documented but not yet wired in MVP v1. The verdict overlay colour
+scheme mirrors the planned LED colours so the visual feedback contract is
+already stable.
+
+---
+
+## 6. API summary
+
+All admin endpoints require a valid session cookie. See `README.md` for
+the full HTTP method / path table.

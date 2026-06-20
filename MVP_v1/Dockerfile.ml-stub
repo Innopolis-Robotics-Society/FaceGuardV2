@@ -1,0 +1,20 @@
+# Lightweight image for the ML stub. The real ML service will have its
+# own Dockerfile (InsightFace + ONNX runtime + OpenCV) — this one only
+# needs FastAPI + Pillow.
+
+FROM python:3.11-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libjpeg62-turbo \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY ml_stub/requirements.txt .
+RUN pip install --no-cache-dir -r ml_stub/requirements.txt
+
+COPY ml_stub/ ./ml_stub/
+
+EXPOSE 8001
+CMD ["uvicorn", "ml_stub.main:app", "--host", "0.0.0.0", "--port", "8001"]

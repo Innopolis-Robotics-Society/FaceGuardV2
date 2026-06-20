@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Logs — FaceGuard{% endblock %}
+
+{% block content %}
+<header>
+  <h2>Access log (US-10)</h2>
+  <form method="get" action="/logs" class="grid">
+    <label>
+      Filter by name
+      <input type="text" name="q" value="{{ query }}" placeholder="substring match">
+    </label>
+    <label>
+      <input type="checkbox" name="today" {% if today_filter %}checked{% endif %}>
+      Today only
+    </label>
+    <div>
+      <button type="submit" class="outline">Apply</button>
+      <a href="/logs" class="button secondary outline">Reset</a>
+    </div>
+  </form>
+</header>
+
+<section>
+  {% if entries %}
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Score</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr class="log-row {% if e.success %}log-ok{% else %}log-denied{% endif %}">
+        <td>{{ e.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>{{ e.name }}</td>
+        <td>{{ e.access_type }}</td>
+        <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
+        <td>
+          {% if e.success %}✓ granted{% else %}✗ denied{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No log entries match the filter.</p>
+  {% endif %}
+</section>
+{% endblock %}
