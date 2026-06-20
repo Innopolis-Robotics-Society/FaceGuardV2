@@ -1,27 +1,53 @@
-Транскрибация встречи
-Заказчик: Ну, я вижу, уже работает, и работает весьма сносно.
-Студент 2: То есть двигаемся в правильном направлении.
-Заказчик: Да, молодцы, как раз-таки вы, получается, оцениваете embedding по 5 кадрам, верно? Да, это здорово. Вот, кстати, вот сейчас было 2 человека в кадре. Как это решается? Почему?
-Студент 1: 2 человека? Ну пока как-то никак, да, я пока никак не делала.
-Студент 2: Окей, ну не делали мы. То есть для MVP v1 нам нужно прикрепить базу данных. Ну и в целом железо... Как-то с железом...
-Заказчик: Будет окей, если вы сделаете железо на 2 этапе. Но это рискованный ход, потому что вы можете не успеть и провалить железо.
-Студент 1: Поэтому лучше на 1?
-Заказчик: Да.
-Студент 1: Ага.
-Заказчик: Вот, ну, фронтик сделать — это не сложно. В остальном, работает, удивительно.
-Студент 1: Да, насчёт фронта. Потому что, как я поняла, Егор хотел сделать формата, как сейчас показано. То есть, чтобы от OpenCV экран открывался и просто какие-то надписи, как сейчас сделаны.
-Заказчик: Ну мне же как-то нужно тоже добавлять пользователей.
-Студент 1: Да, вот. Тоже думаю, да, надо бы.
-Заказчик: Вот, то есть, ты можешь всё ещё подключить к SSH-системе и через SSH пробросить изображение.
-Студент 1: Сейчас, а вот зарегистрировать пользователя — это разве не админ делает?
-Заказчик: То есть, да, это делает админ. Админ как раз-таки подключается через SSH. Типа, тот подключился через SSH — тот админ.
-Студент 3: Как у него должен быть фронтенд?
-Заказчик: Ну, какой-нибудь простой сайтик, сайт. Окей, там список логов баз данных. Добавить, удалить, изменить.
-Студент 2: То есть можно исходя из логов, то есть кого-то там взять, кто приходил, и добавить его...
-Заказчик: Ну нет, так не надо. В живом формате регистрация происходит.
-Студент 2: Угу, хорошо. То есть для MVP v1 у нас должно быть... Что на железо поставить в первую очередь — регистрацию вот эту вот, то чтобы БД мы делали.
-Заказчик: Должны быть CRUD-операции. Да, CRUD — вот базово. Плюс к этому логи. На самом деле, ключевые вещи, которые нужны: там CRUD очевидно, там может быть перманентный и временный... ну, добавление пользователя. По фронту... ну, сайтик простой, там одна страничка хотя бы. Парочка кнопочек: посмотреть, проверить всё. Здесь больших требований к этому нет. Он просто должен быть.
-Студент 1: Хорошо. Всё, у нас вопросов нет. Ну, в принципе, у меня нет. Миши не дождёмся, видимо.
-Студент 2: А что он опаздывает? Так, всё тогда.
-Студент 1: Да, спасибо большое.
-Заказчик: Давай.
+# Meeting Transcript
+
+**Customer:** Well, I see it is already working, and it works quite decently.
+
+**Student 2:** So we are moving in the right direction.
+
+**Customer:** Yes, well done; you are evaluating the embedding based on 5 frames, right? Yes, that is great. By the way, there were just two people in the frame. How is this resolved? Why?
+
+**Student 1:** Two people? Well, right now, it is not handled; yes, I have not implemented anything for it yet.
+
+**Student 2:** Okay, we haven't done it. So for MVP v1, we need to attach a database. And the hardware in general... Somehow with the hardware...
+
+**Customer:** It will be okay if you implement the hardware in stage 2. But this is a risky move because you might run out of time and fail the hardware part.
+
+**Student 1:** So it is better for stage 1?
+
+**Customer:** Yes.
+
+**Student 1:** Got it.
+
+**Customer:** So, making the frontend is not difficult. Otherwise, it works surprisingly well.
+
+**Student 1:** Yes, regarding the frontend. Because, as I understood it, Egor wanted to make it in the format currently shown. That is, a screen opens from OpenCV and just displays some text, the way it is done now.
+
+**Customer:** Well, I also need some way to add users.
+
+**Student 1:** Yes, exactly. I also think it should be done.
+
+**Customer:** So, you can still connect to the SSH system and forward the image via SSH.
+
+**Student 1:** Wait, isn't the administrator the one who registers a user?
+
+**Customer:** Yes, the admin does that. The admin is exactly the one who connects via SSH. Like, whoever connected via SSH is the admin.
+
+**Student 3:** What should their frontend look like?
+
+**Customer:** Well, some simple website. Okay, there should be a list of database logs. Add, delete, edit.
+
+**Student 2:** So, based on the logs, we can take someone who visited and add them...
+
+**Customer:** Well no, do not do it that way. Registration happens in a live format.
+
+**Student 2:** Uh-huh, alright. So for MVP v1 we must have... The first thing to put on the hardware is this registration, so that we implement the database.
+
+**Customer:** There must be CRUD operations. Yes, CRUD — that is the baseline. Plus the logs. Actually, the key things needed are: obviously CRUD, there can be permanent and temporary... well, user addition. For the frontend... well, a simple website, at least one page. A couple of buttons: view, verify everything. There are no strict requirements for it. It just has to exist.
+
+**Student 1:** Alright. That is all, we have no questions. Well, I personally do not. We probably won't wait for Misha.
+
+**Student 2:** Why is he late? So, that is everything then.
+
+**Student 1:** Yes, thank you very much.
+
+**Customer:** See you.
