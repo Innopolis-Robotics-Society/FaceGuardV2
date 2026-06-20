@@ -2,23 +2,23 @@
 
 ## 1. Requirement Index Table
 
-| ID | Short title | MoSCoW priority | Issue | Requirement status | Work Status | Sprint |
+| ID | Short title | MoSCoW priority | Issue | Requirement status | Work Status |
 |---|---|---|---|---|---|---|
-| US-001 | Automatic door unlocking | Must Have | [#20](https://github.com/XeOneD/FaceGuardV2/issues/20) | Active | To Do | [Sprint 2](https://github.com/XeOneD/FaceGuardV2/milestone/2) |
-| US-002 | Register new users to DB | Must Have | [#12](https://github.com/XeOneD/FaceGuardV2/issues/12) | Active | In Progress | [Sprint 1](https://github.com/XeOneD/FaceGuardV2/milestone/1) |
-| US-003 | Visitor temporary access | — | — | Removed | — | — |
-| US-004 | Docker multi-arch package | Could Have | [#26](https://github.com/XeOneD/FaceGuardV2/issues/26) | Active | To Do | — |
-| US-005 | UI status & info display | Should Have | [#27](https://github.com/XeOneD/FaceGuardV2/issues/27) | Active | To Do | — |
-| US-006 | Physical servo motor control | Must Have | [#22](https://github.com/XeOneD/FaceGuardV2/issues/22) | Active | To Do | [Sprint 2](https://github.com/XeOneD/FaceGuardV2/milestone/2) |
-| US-007 | UI servo emulation on x86 | Must Have | [#15](https://github.com/XeOneD/FaceGuardV2/issues/15) | Active | Done | [Sprint 1](https://github.com/XeOneD/FaceGuardV2/milestone/1) |
-| US-008 | Pipeline dataset evaluation | Must Have | [#30](https://github.com/XeOneD/FaceGuardV2/issues/30) | Active | To Do | [Sprint 3](https://github.com/XeOneD/FaceGuardV2/milestone/3) |
+| US-001 | Automatic door unlocking | Must Have | [#7](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/7) | Active | To Do | 
+| US-002 | Register new users to DB | Must Have | [#8](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/8) | Active | In Progress |
+| US-003 | Visitor temporary access | — | — | Removed | — |
+| US-004 | Docker multi-arch package | Could Have | [#9](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/9) | Active | To Do |
+| US-005 | UI status & info display | Should Have | [#11](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/11) | Active | To Do |
+| US-006 | Physical servo motor control | Must Have | [#13](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/13) | Active | To Do |
+| US-007 | UI servo emulation on x86 | Must Have | [#12](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/12) | Active | Done |
+| US-008 | Pipeline dataset evaluation | Must Have | [#14](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/14) | Active | To Do |
 | US-009 | Liveness detection check | — | — | Removed | — | — |
-| US-010 | Detailed access attempt logs | Should Have | [#32](https://github.com/XeOneD/FaceGuardV2/issues/32) | Active | To Do | [Sprint 3](https://github.com/XeOneD/FaceGuardV2/milestone/3) |
-| US-011 | Lock door on low confidence | Must Have | [#35](https://github.com/XeOneD/FaceGuardV2/issues/35) | Active | To Do | [Sprint 3](https://github.com/XeOneD/FaceGuardV2/milestone/3) |
-| US-012 | Evaluation quality report | Must Have | [#36](https://github.com/XeOneD/FaceGuardV2/issues/36) | Active | To Do | — |
-| US-013 | Manage temporary access life | Must Have | [#37](https://github.com/XeOneD/FaceGuardV2/issues/37) | Active | To Do | — |
-| US-014 | Proximity single-user focus | Should Have | [#38](https://github.com/XeOneD/FaceGuardV2/issues/38) | Active | To Do | — |
-| US-015 | Hardware LED indicators | Should Have | [#39](https://github.com/XeOneD/FaceGuardV2/issues/39) | Active | To Do | — |
+| US-010 | Detailed access attempt logs | Should Have | [#16](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/16) | Active | To Do |
+| US-011 | Lock door on low confidence | Must Have | [#11](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/17) | Active | To Do |
+| US-012 | Evaluation quality report | Must Have | [#19](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/19) | Active | To Do |
+| US-013 | Manage temporary access life | Must Have | [#20](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/20)| Active | To Do |
+| US-014 | Proximity single-user focus | Should Have | [#22](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/22) | Active | To Do | — |
+| US-015 | Hardware LED indicators | Should Have | [#23](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/23) | Active | To Do | — |
 
 ---
 
