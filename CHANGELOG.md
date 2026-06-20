@@ -23,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project layout and requirements documentation.
 - Prototype face-detection script using OpenCV layout emulation.
 
-[Unreleased]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/compare/v0.0.0...HEAD
 [0.0.0]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v0.0.0
 
 
@@ -41,5 +40,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-[Unreleased]: https://github.com/ORG/REPO/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/ORG/REPO/releases/tag/v1.0.0
