@@ -1,82 +1,66 @@
-name: "🐛 Bug Report"
-description: "Report something that is broken or not working as expected"
-title: "[BUG]: <Brief Description>"
-labels: ["bug", "pbi"]
-body:
-  - type: markdown
-    attributes:
-      value: |
-        ### 🐛 Bug Report Template
-        Please provide detailed information to help reproduce and fix the issue.
+name: Bug Report
+description: Report a defect or unexpected behaviour
+labels: ["type: bug"]
 
+body:
   - type: textarea
-    id: problem_description
+    id: problem
     attributes:
-      label: "Problem Description"
-      placeholder: "A clear and concise description of what the bug is."
+      label: Problem Description
+      placeholder: What is broken?
     validations:
       required: true
 
   - type: textarea
-    id: repo_steps
+    id: steps
     attributes:
-      label: "Reproduction Steps"
+      label: Steps to Reproduce
       placeholder: |
-        Steps to reproduce the behavior:
-        1. Go to '...'
-        2. Click on '....'
+        1. Step one
+        2. Step two
         3. See error
     validations:
       required: true
 
   - type: textarea
-    id: expected_behavior
+    id: expected
     attributes:
-      label: "Expected Behavior"
-      placeholder: "A clear and concise description of what you expected to happen."
+      label: Expected Behaviour
     validations:
       required: true
 
   - type: textarea
-    id: actual_behavior
+    id: actual
     attributes:
-      label: "Actual Behavior"
-      placeholder: "What actually happens (include error logs, hardware outputs, or error categories)."
+      label: Actual Behaviour
     validations:
       required: true
 
   - type: textarea
     id: environment
     attributes:
-      label: "Environment"
-      placeholder: "OS (Windows/Ubuntu), Architecture (x86/ARM64 Raspberry Pi 5), InsideFace/OpenCV versions, emulator or hardware mode"
+      label: Environment
+      placeholder: "OS, Python version, commit SHA, camera model..."
     validations:
       required: true
 
   - type: textarea
-    id: fix_acceptance_criteria
+    id: ac
     attributes:
-      label: "Acceptance Criteria for the Fix"
-      placeholder: "What specific and testable conditions must be met to consider this bug successfully resolved?"
+      label: Acceptance Criteria for the Fix
+      placeholder: |
+        - [ ] Given ... When ... Then ...
     validations:
       required: true
-
-  - type: markdown
-    attributes:
-      value: "---"
 
   - type: input
     id: implementer
     attributes:
-      label: "Implementer (GitHub Username)"
-      placeholder: "@username of the person fixing the bug"
-    validations:
-      required: true
+      label: Implementer
+      placeholder: "@username"
 
   - type: input
     id: reviewer
     attributes:
-      label: "Reviewer (GitHub Username)"
-      placeholder: "@username of a DIFFERENT team member who will verify the fix"
-    validations:
-      required: true
+      label: Reviewer
+      placeholder: "@username"

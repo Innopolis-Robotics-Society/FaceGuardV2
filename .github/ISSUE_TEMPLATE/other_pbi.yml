@@ -1,61 +1,50 @@
-name: "⚙️ Other PBI"
-description: "Create a technical task, refactoring, spike, or infrastructure issue"
-title: "[PBI]: <Brief Title>"
-labels: ["technical-task", "pbi"]
+name: Other PBI
+description: Technical task, spike, or infrastructure item
+labels: ["type: pbi"]
+
 body:
-  - type: markdown
+  - type: dropdown
+    id: type
     attributes:
-      value: |
-        ### ⚙️ Product Backlog Item Template
-        Use this form for technical, infrastructure, refactoring, or research tasks that improve the product repository.
+      label: Type
+      options: [Technical Task, Spike, Infrastructure, Refactoring, Other]
+    validations:
+      required: true
 
   - type: dropdown
-    id: pbi_type
+    id: moscow
     attributes:
-      label: "Issue Type"
-      description: "Select the nature of this Product Backlog Item"
-      options:
-        - "Technical Debt"
-        - "Refactoring"
-        - "Spike / Research"
-        - "Documentation"
-        - "DevOps / CI-CD"
-        - "Hardware Setup"
+      label: MoSCoW Priority
+      options: [Must Have, Should Have, Could Have, Won't Have]
     validations:
       required: true
 
   - type: textarea
     id: description
     attributes:
-      label: "Description"
-      placeholder: "Clearly describe the technical task, goals, and why it needs to be done..."
+      label: Description
+      placeholder: What needs to be done and why
     validations:
       required: true
 
   - type: textarea
-    id: acceptance_criteria
+    id: ac
     attributes:
-      label: "Acceptance Criteria"
-      placeholder: "What specific, observable, and testable conditions must be achieved for this task to be considered Done?"
+      label: Acceptance Criteria
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
     validations:
       required: true
-
-  - type: markdown
-    attributes:
-      value: "---"
 
   - type: input
     id: implementer
     attributes:
-      label: "Implementer (GitHub Username)"
-      placeholder: "@username of the person responsible for doing the work"
-    validations:
-      required: true
+      label: Implementer
+      placeholder: "@username"
 
   - type: input
     id: reviewer
     attributes:
-      label: "Reviewer (GitHub Username)"
-      placeholder: "@username of a DIFFERENT team member responsible for reviewing the work"
-    validations:
-      required: true
+      label: Reviewer
+      placeholder: "@username"

@@ -2,7 +2,18 @@
 Closes #
 
 ## Summary of Changes
+
+
 ## Testing Performed
+
+## Acceptance Criteria Verification
+
+Copy the acceptance criteria from the linked issue and tick each one:
+
+- [ ] 
+- [ ] 
+
+
 ## Reviewer Checklist
 - [ ] The changes do not break the existing functionality.
 - [ ] There are no secrets, credentials, or passwords in the code.

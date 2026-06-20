@@ -1,96 +1,72 @@
-name: "👥 User Story"
-description: "Create or update a User Story in the Product Backlog"
-title: "[US-XXX]: <Brief Title>"
-labels: ["user-story", "pbi"]
-body:
-  - type: markdown
-    attributes:
-      value: |
-        ### 📖 User Story Definition Rules
-        Before filling this out, remember:
-        - **Stable IDs:** Once assigned, IDs (e.g., US-001) must **never** be changed, reused, or reassigned.
-        - **No Subtasks:** Do NOT use this issue as the main container for implementation subtasks. Create separate linked PBIs instead.
-        - **Size:** Stories selected for a Sprint must fit within that Sprint. Otherwise, split them.
+name: User Story
+description: A product backlog item expressed as a user story
+labels: ["type: user story"]
 
+body:
   - type: input
     id: story_id
     attributes:
-      label: "Stable User Story ID"
-      placeholder: "e.g., US-001 (Do not change or reuse if already assigned)"
+      label: Story ID
+      placeholder: US-01
     validations:
       required: true
 
   - type: dropdown
-    id: status
+    id: moscow
     attributes:
-      label: "Requirement Status"
-      description: "Select the current lifecycle status of this product requirement."
-      options:
-        - "Active - An accepted, current product requirement"
-        - "Removed - No longer considered a current product requirement"
+      label: MoSCoW Priority
+      options: [Must Have, Should Have, Could Have, Won't Have]
+    validations:
+      required: true
+
+  - type: input
+    id: role
+    attributes:
+      label: As a...
+      placeholder: lab worker
+    validations:
+      required: true
+
+  - type: input
+    id: action
+    attributes:
+      label: I want to...
+      placeholder: unlock the door automatically when my face is recognized
+    validations:
+      required: true
+
+  - type: input
+    id: value
+    attributes:
+      label: So that...
+      placeholder: I can enter without access cards
     validations:
       required: true
 
   - type: textarea
-    id: removal_reason
+    id: notes
     attributes:
-      label: "Reason for Removal (If applicable)"
-      placeholder: "If you set the status to 'Removed', explicitly explain here why it is no longer required. DO NOT delete the requirement history."
-    validations:
-      required: false
-
-  - type: markdown
-    attributes:
-      value: "---"
+      label: Notes and Constraints
+      placeholder: Any additional context, constraints, or technical notes
 
   - type: textarea
-    id: statement
+    id: ac
     attributes:
-      label: "User Story Statement"
+      label: Acceptance Criteria
       placeholder: |
-        As a [user role/persona],
-        I want [desired action],
-        So that [expected value].
-      value: |
-        As a 
-        I want 
-        So that
+        - [ ] Given ... When ... Then ...
+        - [ ] Given ... When ... Then ...
     validations:
       required: true
 
-  - type: textarea
-    id: constraints
+  - type: input
+    id: implementer
     attributes:
-      label: "Relevant Notes, Constraints, Assumptions, or Open Questions"
-      placeholder: "List any architectural constraints, hardware limitations, technical assumptions, or questions that need alignment..."
-    validations:
-      required: false
+      label: Implementer
+      placeholder: "@username"
 
-  - type: textarea
-    id: acceptance_criteria
+  - type: input
+    id: reviewer
     attributes:
-      label: "Acceptance Criteria"
-      placeholder: |
-        Define conditions of satisfaction using Gherkin syntax (Given-When-Then) where possible.
-        
-        Scenario: [Name]
-          Given [precondition]
-          When [action]
-          Then [result]
-      value: |
-        ### Scenario 1: 
-        - **Given** - **When** - **Then** validations:
-      required: true
-
-  - type: checkboxes
-    id: workflow_compliance
-    attributes:
-      label: "Agile Workflow Compliance"
-      description: "You must acknowledge the repository rules before submitting this User Story."
-      options:
-        - label: "I confirm this issue will NOT contain implementation subtasks. Separate linked PBIs will be tracked explicitly for development, design, or testing."
-          required: true
-        - label: "I confirm this story is small enough to be completed within a single Sprint (or it will be refined/split before Sprint Planning)."
-          required: true
-        - label: "I understand that this story is considered 'Done' only when all linked supporting PBIs are completed."
-          required: true
+      label: Reviewer
+      placeholder: "@username"
