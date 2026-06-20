@@ -3,7 +3,7 @@
 ## 1. Requirement Index Table
 
 | ID | Short title | MoSCoW priority | Issue | Requirement status | Work Status |
-|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|
 | US-001 | Automatic door unlocking | Must Have | [#7](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/7) | Active | To Do | 
 | US-002 | Register new users to DB | Must Have | [#8](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/8) | Active | In Progress |
 | US-003 | Visitor temporary access | — | — | Removed | — |
