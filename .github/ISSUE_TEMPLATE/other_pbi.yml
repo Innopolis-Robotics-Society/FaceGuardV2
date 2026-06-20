@@ -1,0 +1,50 @@
+name: Other PBI
+description: Technical task, spike, or infrastructure item
+labels: ["type: pbi"]
+
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options: [Technical Task, Spike, Infrastructure, Refactoring, Other]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: moscow
+    attributes:
+      label: MoSCoW Priority
+      options: [Must Have, Should Have, Could Have, Won't Have]
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: What needs to be done and why
+    validations:
+      required: true
+
+  - type: textarea
+    id: ac
+    attributes:
+      label: Acceptance Criteria
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: true
+
+  - type: input
+    id: implementer
+    attributes:
+      label: Implementer
+      placeholder: "@username"
+
+  - type: input
+    id: reviewer
+    attributes:
+      label: Reviewer
+      placeholder: "@username"

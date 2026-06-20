@@ -1,0 +1,32 @@
+name: Course Task
+description: "Course deliverable — NOT a PBI, does not count toward backlog minimums"
+labels: ["type: course task"]
+
+body:
+  - type: markdown
+    attributes:
+      value: "**!!!Course Tasks are not PBIs and do not count toward backlog-size minimums.**"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: Describe what needs to be done
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Expected Evidence / Deliverable
+      placeholder: |
+        - Report uploaded to wiki
+        - Screenshot attached to this issue
+    validations:
+      required: true
+
+  - type: input
+    id: due_date
+    attributes:
+      label: Due Date
+      placeholder: "YYYY-MM-DD"
