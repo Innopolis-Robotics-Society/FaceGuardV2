@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Interactive GitHub Issue Forms for structured requirements management (User Story, Other PBI, Bug Report, Course Task) [#1]().
-- Pull Request Template with mandatory checklists for automated verification and changelog compliance [#2]().
 
 ### Changed
 
@@ -19,7 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-### Security
 
 ## [0.0.0] - 2026-06-12
 ### Added
@@ -28,3 +25,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/compare/v0.0.0...HEAD
 [0.0.0]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v0.0.0
+
+
+## [Unreleased] - 2026-06-21
+
+### Added
+- Issue-Linked Workflow
+
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+[Unreleased]: https://github.com/ORG/REPO/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/ORG/REPO/releases/tag/v1.0.0
