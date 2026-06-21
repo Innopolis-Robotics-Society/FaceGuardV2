@@ -1,7 +1,5 @@
 verbose = "info"
-
 hidden = true
-
 include_verbatim = true
 
 exclude = [
@@ -11,4 +9,9 @@ exclude = [
   # local adresses that are not reachable from GitHub
   '.*localhost.*',
   '.*127\.0\.0\.1.*',
+]
+
+exclude_path = [
+  # ignore files with the extension .html
+  '\.html$',
 ]
