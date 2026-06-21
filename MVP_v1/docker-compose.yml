@@ -19,22 +19,17 @@ services:
       - faceguard
 
   ml:
-    # ---- Real ML service (replace with your team's image) ----
-    # image: faceguard-ml:latest
-    # ---------------------------------------------------------
-    # For local development we use the stub shipped in this repo.
     build:
-      context: .
-      dockerfile: Dockerfile.ml-stub
-    image: faceguard-ml-stub:latest
+      context: ./ml_service
+      dockerfile: Dockerfile
+    image: faceguard-ml:latest
     container_name: faceguard-ml
     restart: unless-stopped
     ports:
       - "8001:8001"
-    # On real Pi: pass the camera device through. Uncomment when switching
-    # to the real ML service.
-    # devices:
-    #   - /dev/video0:/dev/video0
+    devices:
+      - /dev/video0:/dev/video0
+    privileged: true
     networks:
       - faceguard
 
