@@ -155,7 +155,7 @@ servo motor via GPIO, and validate end-to-end with a real camera and door lock.
 | @b3ss0n | [#19](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/19), [#33](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/33) | [PR #31](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/31) | [PR #28](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/28) |
 | @NadezhdaVoskan | [#12](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/12), [#14](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/14), [#16](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/16), [#17](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/17)| [PR #37](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/37) | [PR #15](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/15) |
 | @XeOneD | [#20](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/20) | [PR #38](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/38) | [PR #37](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/37) |
-| @TheShamil | [#22](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/22), [#23](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/23) | - | [PR #32](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/32) |
+| @TheShamil | [#22](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/22), [#23](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/23) | [PR #41](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/41) | [PR #32](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/32) |
 
 ---
 
