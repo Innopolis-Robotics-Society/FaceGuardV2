@@ -1,0 +1,18 @@
+{# Partial returned after a registration attempt (HTMX swap target). #}
+{% if ok %}
+<article class="register-success">
+  <h4>✓ Success</h4>
+  <p>{{ message }}</p>
+  {% if preview %}
+    <details>
+      <summary>Embedding preview (first 8 components)</summary>
+      <code>{{ preview | map('string') | join(', ') }}</code>
+    </details>
+  {% endif %}
+</article>
+{% else %}
+<article class="register-error">
+  <h4>✗ Failed</h4>
+  <p>{{ message }}</p>
+</article>
+{% endif %}

@@ -1,0 +1,38 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: faceguard-backend:latest
+    container_name: faceguard-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Persistent SQLite DB lives here. Survives container rebuilds.
+      - ./data:/data
+    depends_on:
+      - ml
+    networks:
+      - faceguard
+
+  ml:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    image: faceguard-ml:latest
+    container_name: faceguard-ml
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    devices:
+      - /dev/video0:/dev/video0
+    privileged: true
+    networks:
+      - faceguard
+
+networks:
+  faceguard:
+    driver: bridge

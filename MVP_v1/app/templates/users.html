@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Users — FaceGuard{% endblock %}
+
+{% block content %}
+<header>
+  <h2>Users & Guests</h2>
+  <p class="muted">
+    Permanent users ({{ users|length }}) · Active guests ({{ guests|length }})
+    · <a href="/register">+ Register new</a>
+  </p>
+</header>
+
+<section>
+  <h3>Permanent users</h3>
+  {% if users %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Registered</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.name }}</td>
+        <td>{{ u.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <form method="post" action="/users/{{ u.id }}/delete"
+                onsubmit="return confirm('Delete user {{ u.name|e }}?');"
+                style="margin:0">
+            <button class="outline secondary small" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No permanent users yet. <a href="/register">Register one</a>.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h3>Active guests</h3>
+  {% if guests %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Expires</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for g in guests %}
+      <tr>
+        <td>{{ g.id }}</td>
+        <td>{{ g.name }}</td>
+        <td>{{ g.expires_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <form method="post" action="/guests/{{ g.id }}/delete"
+                onsubmit="return confirm('Revoke guest {{ g.name|e }}?');"
+                style="margin:0">
+            <button class="outline secondary small" type="submit">Revoke</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No active guests.</p>
+  {% endif %}
+</section>
+{% endblock %}

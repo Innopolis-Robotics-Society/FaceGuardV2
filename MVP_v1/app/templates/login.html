@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Login — FaceGuard{% endblock %}
+
+{% block content %}
+<article class="login-card">
+  <h2>FaceGuard Admin</h2>
+  {% if error %}
+    <small class="error">{{ error }}</small>
+  {% endif %}
+  <form method="post" action="/login">
+    <label>
+      Username
+      <input type="text" name="username" required autofocus>
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit">Sign in</button>
+  </form>
+</article>
+{% endblock %}
