@@ -1,4 +1,4 @@
-# FaceGuardV2 — Week 2 Report
+# FaceGuardV2 - Week 2 Report
 
 ## Project Overview
 
@@ -35,9 +35,9 @@ The following stories were defined and approved during the Week 2 customer meeti
 
 FaceGuardV2 exposes two interfaces: a **Graphical Interface** (Live Display) and a **Non-Graphical Interface** (Admin CLI). There is no API/HTTP interface in the current system.
 
-### 1. Graphical Interface — Live Display (OpenCV Window)
+### 1. Graphical Interface - Live Display (OpenCV Window)
 
-The interactive prototype for the graphical interface is the MVP v0 application itself. It opens an OpenCV window that streams the webcam feed in real time and transitions through five visual states based on the recognition pipeline output. The interface requires no user input — the user simply stands in front of the camera.
+The interactive prototype for the graphical interface is the MVP v0 application itself. It opens an OpenCV window that streams the webcam feed in real time and transitions through five visual states based on the recognition pipeline output. The interface requires no user input - the user simply stands in front of the camera.
 
 The five states documented in [docs/interface.md](../../docs/interface.md) are:
 
@@ -59,11 +59,11 @@ Screenshots of each interface state from the running prototype:
 | Unknown (not in database) | ![Unknown state](images/interface_state4.png) |
 | Error (camera failure) | ![Error state](images/interface_state5.png) |
 
-### 2. Non-Graphical Interface — Admin CLI
+### 2. Non-Graphical Interface - Admin CLI
 
 The Admin CLI is a command-line interface for system administrators to manage users, register guests, view logs, and adjust system settings. It is documented in full but **not yet implemented** in MVP v0.
 
-- **Documentation:** [docs/interface.md](../../docs/interface.md) — complete specification of all commands (`register`, `remove`, `list`, `add-guest`, `logs`, `status`, `threshold`), their inputs, outputs, and error examples.
+- **Documentation:** [docs/interface.md](../../docs/interface.md) - complete specification of all commands (`register`, `remove`, `list`, `add-guest`, `logs`, `status`, `threshold`), their inputs, outputs, and error examples.
 
 Because the Admin CLI is not yet implemented, there is no interactive mock or runnable demonstration available at this stage. The documentation in `docs/interface.md` serves as the interface specification artifact.
 
@@ -72,10 +72,10 @@ Because the Admin CLI is not yet implemented, there is no interactive mock or ru
 ## MVP v0
 
 - **Report:** [reports/week2/mvp-v0-report.md](mvp-v0-report.md)
-- **Runnable artifact (Windows executable):** [FaceVerification.zip — GitHub Release v0.0.0](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/download/v0.0.0/FaceVerification.zip)
+- **Runnable artifact (Windows executable):** [FaceVerification.zip - GitHub Release v0.0.0](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/download/v0.0.0/FaceVerification.zip)
 - **Source code:** [MVP_v0/ directory](../../MVP_v0) on the `Assignment-2` branch
 - **Run instructions:** Download `FaceVerification.zip` from the release page, unzip, and run `FaceVerification.exe`. The application will open an OpenCV window streaming the default webcam. First, register by standing in front of the camera until 5 embeddings are captured (status shows "REGISTERING n/5"). After registration, the system switches to verification mode and compares subsequent face captures against the stored reference embedding, displaying "MATCH" or "UNKNOWN" with the cosine similarity score. Press `Esc` to exit. See also the [root README](../../README.md) and the [mvp-v0-report.md](mvp-v0-report.md) for detailed setup.
-- **Public video demonstration:** [Google Drive — MVP v0 Demo](https://drive.google.com/file/d/1ttbY5ay20juh_uStaIQ6FwdaV638wXiO/view?usp=sharing)
+- **Public video demonstration:** [Google Drive - MVP v0 Demo](https://drive.google.com/file/d/1ttbY5ay20juh_uStaIQ6FwdaV638wXiO/view?usp=sharing)
 
 ![Deployed MVP v0 screenshot](images/deployed%20MVP-0.png)
 
@@ -90,9 +90,9 @@ The repository uses a minimal pull request template located at:
 - [`.github/pull_request_template.md`](../../.github/pull_request_template.md)
 
 The template includes:
-- **Summary of changes** — free-text description of what the PR modifies.
-- **Testing performed** — description of how changes were validated.
-- **Reviewer checklist** — two mandatory checkboxes: (1) changes do not break existing functionality, (2) no secrets or passwords in the code.
+- **Summary of changes** - free-text description of what the PR modifies.
+- **Testing performed** - description of how changes were validated.
+- **Reviewer checklist** - two mandatory checkboxes: (1) changes do not break existing functionality, (2) no secrets or passwords in the code.
 
 ### Reviewed PRs/MRs from Week 2
 
@@ -134,7 +134,7 @@ The workflow triggers on pushes and pull requests to the `main` branch, checks o
 
 The latest successful Lychee run on the protected default branch (`main`) is available in the repository's Actions tab:
 
-- [GitHub Actions — Link Checker workflow](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/actions/workflows/lychee.yml)
+- [GitHub Actions - Link Checker workflow](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/actions/workflows/lychee.yml)
 
 ### Excluded Links and Manual Verification
 
@@ -142,9 +142,9 @@ The following URL patterns are excluded from Lychee checking via `lychee.toml`:
 
 | Excluded Pattern | Justification | Manual Verification |
 |-----------------|---------------|-------------------|
-| `https://t.me/.*` | Telegram links require authentication and return non-standard HTTP responses, causing false positives in automated link checkers. These links are not critical to the project documentation. | N/A — no Telegram links are present in the repository. |
+| `https://t.me/.*` | Telegram links require authentication and return non-standard HTTP responses, causing false positives in automated link checkers. These links are not critical to the project documentation. | N/A - no Telegram links are present in the repository. |
 | `http://localhost:.*` | Local development addresses are not reachable from GitHub Actions runners or external CI environments. These URLs are only valid during local development. | Verified locally: `http://localhost:8000` and similar development URLs are not referenced in any committed documentation files. |
-| `http://127.0.0.1:.*` | Same as localhost — loopback addresses are not accessible from CI. Only used during local testing. | Verified locally: no `127.0.0.1` URLs appear in committed files. |
+| `http://127.0.0.1:.*` | Same as localhost - loopback addresses are not accessible from CI. Only used during local testing. | Verified locally: no `127.0.0.1` URLs appear in committed files. |
 
 All excluded link patterns have been manually verified by visiting each potential URL in a browser. No excluded links are present in the repository documentation, and no legitimate external links are being skipped by these exclusions.
 
@@ -202,7 +202,7 @@ The graphical interface prototype (Live Display) covers the following stable use
 
 ### Prototype and Interface Artifact Justification
 
-**Graphical Interface (Live Display):** This is the primary user-facing interface of FaceGuardV2. It was selected because the system's core value proposition — hands-free door access — is fundamentally a visual, real-time experience. The OpenCV window serves as both the prototype and the running implementation, showing the camera feed, detection results, and access decisions. It directly represents US-01 (the recognition pipeline and decision display), US-02 (the registration flow), US-05 (visual feedback), and US-07 (x86 visual emulation of hardware feedback).
+**Graphical Interface (Live Display):** This is the primary user-facing interface of FaceGuardV2. It was selected because the system's core value proposition - hands-free door access - is fundamentally a visual, real-time experience. The OpenCV window serves as both the prototype and the running implementation, showing the camera feed, detection results, and access decisions. It directly represents US-01 (the recognition pipeline and decision display), US-02 (the registration flow), US-05 (visual feedback), and US-07 (x86 visual emulation of hardware feedback).
 
 **Non-Graphical Interface (Admin CLI):** This interface was documented because system administrators need a way to manage users, register visitors, adjust thresholds, and review logs. It is specified in `docs/interface.md` with complete command definitions, expected outputs, and error handling. The CLI represents US-02 (admin-driven registration), US-03 (temporary visitor management), US-08 (threshold tuning), and US-10 (audit log access). It is not yet implemented but the specification provides a clear contract for future development.
 
@@ -216,14 +216,14 @@ MVP v0 establishes the product foundation by implementing the core face recognit
 
 | User Story ID | MVP v0 Contribution |
 |--------------|---------------------|
-| **US-01** | Core recognition pipeline is functional — face is detected, embedding extracted, compared, and a verdict rendered. This is the infrastructure for automatic unlocking; only the physical actuation layer is missing. |
+| **US-01** | Core recognition pipeline is functional - face is detected, embedding extracted, compared, and a verdict rendered. This is the infrastructure for automatic unlocking; only the physical actuation layer is missing. |
 | **US-02** | Registration flow is implemented (5-frame capture → averaged embedding). The persistence and admin UI layers are not yet in place, but the biometric enrollment mechanism works. |
 | **US-05** | The OpenCV window displays the camera feed, status text, and color-coded visual feedback. This is the foundation of the GUI feedback system. |
 | **US-06** | MVP v0 does not yet interact with GPIO hardware, but the software decision signal (match/no-match) is the necessary precondition for servo actuation. |
 | **US-07** | The application runs on x86/Windows with visual feedback instead of hardware, demonstrating the cross-platform emulation concept. |
 | **US-08** | A threshold value (0.45) is used for the match decision, establishing the threshold-based architecture. Data-driven evaluation with precision/recall curves is not yet implemented. |
 
-**Repeatable smoke-check scenario:** Download the pre-built `FaceVerification.exe` from [GitHub Release v0.0.0](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v0.0.0), run it, observe the OpenCV window, register by standing in front of the camera until 5 frames are captured, then verify by standing in front again — the system should display "MATCH" with a cosine similarity score. Press `Esc` to exit. See the [mvp-v0-report.md](mvp-v0-report.md) for full details.
+**Repeatable smoke-check scenario:** Download the pre-built `FaceVerification.exe` from [GitHub Release v0.0.0](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v0.0.0), run it, observe the OpenCV window, register by standing in front of the camera until 5 frames are captured, then verify by standing in front again - the system should display "MATCH" with a cosine similarity score. Press `Esc` to exit. See the [mvp-v0-report.md](mvp-v0-report.md) for full details.
 
 ---
 
