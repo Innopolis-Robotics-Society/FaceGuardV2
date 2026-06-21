@@ -5,7 +5,7 @@ Show the minimum version of the product (the technical part of the work scheme, 
 
 ## Deployment URL or runnable-artifact link
 [MVPv0 builded release](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/download/v0.0.0/FaceVerification.zip)
-[Source code](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/tree/Assignment-2/MVP_v0)
+[Source code](../../MVP_v0/)
 
 ## Public video demonstration link
 https://drive.google.com/file/d/1ttbY5ay20juh_uStaIQ6FwdaV638wXiO/view?usp=sharing
