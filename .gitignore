@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 venv/
 env/
+uv.lock
 
 # Test / type caches
 .pytest_cache/

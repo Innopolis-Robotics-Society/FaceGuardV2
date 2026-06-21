@@ -19,7 +19,7 @@ WORKDIR /app
 
 # Install Python deps first (better layer caching).
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=300 --no-cache-dir -r requirements.txt
 
 # Application code.
 COPY app/ ./app/
