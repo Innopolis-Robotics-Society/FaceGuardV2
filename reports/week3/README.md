@@ -179,17 +179,6 @@ servo motor via GPIO, and validate end-to-end with a real camera and door lock.
 
 ---
 
-## Reviewed PRs - Week 3 Evidence
-
-| PR | Title | Author | Reviewer |
-|----|-------|--------|----------|
-| [PR #6](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/6) | Issues forms | @Kenzyss | @newsow |
-| [PR #15](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/15) | Updated roadmap | @Kenzyss | @NadezhdaVoskan |
-| [PR #27](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/27) | Write all dependences in pyproject | @newsow | @Kenzyss |
-| [PR #28](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/28) | Added images | @Kenzyss | @b3ss0n |
-| [PR #31](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/pull/31) | Assignment 3 | @b3ss0n | @newsow |
-
----
 
 ## Screenshots
 
