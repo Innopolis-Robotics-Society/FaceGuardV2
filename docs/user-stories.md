@@ -1,4 +1,4 @@
-# 👥 Product Backlog — User Stories
+# Product Backlog — User Stories
 
 ## 1. Requirement Index Table
 
