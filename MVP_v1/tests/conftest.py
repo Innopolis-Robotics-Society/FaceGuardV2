@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -9,29 +10,24 @@ ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+os.environ["DATABASE_PATH"] = "/tmp/faceguard-test.db"
+os.environ["SECRET_KEY"] = "test-secret-key-32-bytes-long!!"
+os.environ["ADMIN_PASSWORD"] = "testpass"
+os.environ["SERVO_MODE"] = "emulated"
+os.environ["SERVO_PIN"] = "18"
+os.environ["SERVO_OPEN_DURATION_SEC"] = "0.05"
+os.environ["ML_SERVICE_URL"] = "http://localhost:8001"
+os.environ["LOG_LEVEL"] = "DEBUG"
+
 import pytest
 from fastapi.testclient import TestClient
 
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
-    """FastAPI TestClient with test settings and mocked external services."""
-    from app.config import Settings
-
-    test_settings = Settings(
-        DATABASE_PATH=str(tmp_path / "test.db"),
-        SECRET_KEY="test-secret-key-32-bytes-long!!",
-        ADMIN_PASSWORD="testpass",
-        SERVO_MODE="emulated",
-        SERVO_PIN=18,
-        SERVO_OPEN_DURATION_SEC=0.05,
-        ML_SERVICE_URL="http://localhost:8001",
-        LOG_LEVEL="DEBUG",
-    )
-
-    import app.config
-
-    monkeypatch.setattr(app.config, "get_settings", lambda: test_settings)
+    """FastAPI TestClient with mocked external services (no real ML/HTTP/GPIO)."""
+    db_path = str(tmp_path / "test.db")
+    monkeypatch.setenv("DATABASE_PATH", db_path)
 
     import app.ml_client
 
@@ -43,7 +39,6 @@ def client(tmp_path, monkeypatch):
 
     monkeypatch.setattr(app.ml_client.MLClient, "start", fake_ml_start)
     monkeypatch.setattr(app.ml_client.MLClient, "close", fake_ml_close)
-
     import app.recognition
 
     async def fake_loop_start(self):

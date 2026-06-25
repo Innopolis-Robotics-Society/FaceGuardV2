@@ -69,9 +69,7 @@ class RecognitionLoop:
                 await self._tick()
             except Exception:  # pragma: no cover — defensive
                 log.exception("Recognition tick crashed")
-                self._state.update(
-                    CurrentVerdict(verdict="error", name="Recognition loop crashed")
-                )
+                self._state.update(CurrentVerdict(verdict="error", name="Recognition loop crashed"))
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._interval)
             except TimeoutError:
@@ -86,9 +84,7 @@ class RecognitionLoop:
             self._state.set_ml_health(healthy)
             self._last_health_check = now
             if not healthy:
-                self._state.update(
-                    CurrentVerdict(verdict="error", name="ML service unreachable")
-                )
+                self._state.update(CurrentVerdict(verdict="error", name="ML service unreachable"))
                 return
 
         latest = await self._ml.get_latest()
@@ -126,7 +122,8 @@ class RecognitionLoop:
             )
             log.info(
                 "Denied: best_score=%.3f threshold=%.3f",
-                result.score, self._threshold,
+                result.score,
+                self._threshold,
             )
             return
 
@@ -143,7 +140,9 @@ class RecognitionLoop:
         )
         log.info(
             "Granted: name=%s type=%s score=%.3f",
-            result.name, result.access_type, result.score,
+            result.name,
+            result.access_type,
+            result.score,
         )
         # Trigger the servo in a thread — even GpioServo's open() returns
         # quickly, but we don't want any chance of blocking the loop.
@@ -175,6 +174,7 @@ def register_one(
 
     # Synchronous loop — runs in a worker thread, see MLClient.start().
     import httpx
+
     with httpx.Client(base_url=ml._base_url, timeout=ml._timeout) as client:
         for i in range(frame_count):
             try:
@@ -190,10 +190,7 @@ def register_one(
 
             face = max(
                 faces,
-                key=lambda f: (
-                    (f["bbox"][2] - f["bbox"][0])
-                    * (f["bbox"][3] - f["bbox"][1])
-                ),
+                key=lambda f: (f["bbox"][2] - f["bbox"][0]) * (f["bbox"][3] - f["bbox"][1]),
             )
             embeddings.append(np.asarray(face["embedding"], dtype=np.float32))
             if i < frame_count - 1:

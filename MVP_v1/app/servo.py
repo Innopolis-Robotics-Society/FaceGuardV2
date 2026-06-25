@@ -38,8 +38,7 @@ class Servo(Protocol):
     mode: str
 
     @property
-    def is_open(self) -> bool:
-        ...
+    def is_open(self) -> bool: ...
 
     def open(self) -> None:
         """Trigger the open → wait → close sequence. Non-blocking."""
@@ -86,9 +85,7 @@ class EmulatedServo:
             self._is_open = True
             self._last_event = {"action": "opened", "at": time.time()}
             log.info("[emulated-servo] OPEN (door unlocked)")
-            self._thread = threading.Thread(
-                target=self._auto_close, daemon=True
-            )
+            self._thread = threading.Thread(target=self._auto_close, daemon=True)
             self._thread.start()
 
     def _auto_close(self) -> None:
@@ -153,12 +150,12 @@ class GpioServo:
                 return
             self._is_open = True
             self._servo.angle = self._open_angle
-            log.info("[gpio-servo] OPEN ( BCM %s -> %s° )",
-                     self._servo.pin.number if hasattr(self._servo, "pin") else "?",
-                     self._open_angle)
-            self._thread = threading.Thread(
-                target=self._auto_close, daemon=True
+            log.info(
+                "[gpio-servo] OPEN ( BCM %s -> %s° )",
+                self._servo.pin.number if hasattr(self._servo, "pin") else "?",
+                self._open_angle,
             )
+            self._thread = threading.Thread(target=self._auto_close, daemon=True)
             self._thread.start()
 
     def _auto_close(self) -> None:
@@ -183,8 +180,6 @@ def make_servo(settings) -> Servo:
                 open_duration_sec=settings.servo_open_duration_sec,
             )
         except Exception as e:  # pragma: no cover — hardware-dependent
-            log.error(
-                "Failed to init GpioServo (falling back to emulated): %s", e
-            )
+            log.error("Failed to init GpioServo (falling back to emulated): %s", e)
             return EmulatedServo(open_duration_sec=settings.servo_open_duration_sec)
     return EmulatedServo(open_duration_sec=settings.servo_open_duration_sec)

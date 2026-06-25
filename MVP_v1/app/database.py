@@ -209,16 +209,12 @@ class FaceDatabase:
 
     def list_users(self) -> list[User]:
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT * FROM users ORDER BY name ASC"
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM users ORDER BY name ASC").fetchall()
         return [_row_to_user(r) for r in rows]
 
     def delete_user(self, user_id: int) -> bool:
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM users WHERE id = ?", (user_id,)
-            )
+            cur = self._conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
             self._conn.commit()
             return cur.rowcount > 0
 
@@ -241,8 +237,7 @@ class FaceDatabase:
         blob = _encode_embedding(embedding)
         with self._lock:
             cur = self._conn.execute(
-                "INSERT INTO guests (name, embedding, expires_at) "
-                "VALUES (?, ?, ?)",
+                "INSERT INTO guests (name, embedding, expires_at) VALUES (?, ?, ?)",
                 (name, blob, _to_iso(expires_at)),
             )
             self._conn.commit()
@@ -261,31 +256,24 @@ class FaceDatabase:
 
     def get_guest(self, guest_id: int) -> Guest | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM guests WHERE id = ?", (guest_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM guests WHERE id = ?", (guest_id,)).fetchone()
         return _row_to_guest(row) if row else None
 
     def list_guests(self, include_expired: bool = False) -> list[Guest]:
         with self._lock:
             if include_expired:
-                rows = self._conn.execute(
-                    "SELECT * FROM guests ORDER BY expires_at ASC"
-                ).fetchall()
+                rows = self._conn.execute("SELECT * FROM guests ORDER BY expires_at ASC").fetchall()
             else:
                 now_iso = _to_iso(datetime.now(UTC))
                 rows = self._conn.execute(
-                    "SELECT * FROM guests WHERE expires_at > ? "
-                    "ORDER BY expires_at ASC",
+                    "SELECT * FROM guests WHERE expires_at > ? ORDER BY expires_at ASC",
                     (now_iso,),
                 ).fetchall()
         return [_row_to_guest(r) for r in rows]
 
     def delete_guest(self, guest_id: int) -> bool:
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM guests WHERE id = ?", (guest_id,)
-            )
+            cur = self._conn.execute("DELETE FROM guests WHERE id = ?", (guest_id,))
             self._conn.commit()
             return cur.rowcount > 0
 
@@ -297,9 +285,7 @@ class FaceDatabase:
         """
         now_iso = _to_iso(datetime.now(UTC))
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM guests WHERE expires_at < ?", (now_iso,)
-            )
+            cur = self._conn.execute("DELETE FROM guests WHERE expires_at < ?", (now_iso,))
             self._conn.commit()
             return cur.rowcount
 
@@ -316,8 +302,7 @@ class FaceDatabase:
     ) -> None:
         with self._lock:
             self._conn.execute(
-                "INSERT INTO logs (name, score, access_type, success) "
-                "VALUES (?, ?, ?, ?)",
+                "INSERT INTO logs (name, score, access_type, success) VALUES (?, ?, ?, ?)",
                 (name, score, access_type, bool(success)),
             )
             self._conn.commit()
@@ -376,9 +361,7 @@ class FaceDatabase:
 
         # 2. Load candidates.
         with self._lock:
-            user_rows = self._conn.execute(
-                "SELECT id, name, embedding FROM users"
-            ).fetchall()
+            user_rows = self._conn.execute("SELECT id, name, embedding FROM users").fetchall()
             now_iso = _to_iso(datetime.now(UTC))
             guest_rows = self._conn.execute(
                 "SELECT id, name, embedding FROM guests WHERE expires_at > ?",
@@ -454,9 +437,7 @@ class FaceDatabase:
 
     def get_admin(self, admin_id: int) -> Admin | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM admins WHERE id = ?", (admin_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM admins WHERE id = ?", (admin_id,)).fetchone()
         return _row_to_admin(row) if row else None
 
     def get_admin_by_username(self, username: str) -> Admin | None:
@@ -468,9 +449,7 @@ class FaceDatabase:
 
     def list_admins(self) -> list[Admin]:
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT * FROM admins ORDER BY username ASC"
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM admins ORDER BY username ASC").fetchall()
         return [_row_to_admin(r) for r in rows]
 
     def count_admins(self) -> int:

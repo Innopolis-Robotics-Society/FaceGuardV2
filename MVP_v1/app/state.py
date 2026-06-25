@@ -51,9 +51,7 @@ class CurrentVerdict:
             "score": round(self.score, 4),
             "access_type": self.access_type,
             "matched_user_id": self.matched_user_id,
-            "timestamp": datetime.fromtimestamp(
-                self.timestamp, tz=UTC
-            ).isoformat(),
+            "timestamp": datetime.fromtimestamp(self.timestamp, tz=UTC).isoformat(),
             "is_door_open": self.verdict == "granted",
         }
 

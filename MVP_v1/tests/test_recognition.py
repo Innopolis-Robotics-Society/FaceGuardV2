@@ -21,7 +21,7 @@ def test_recognition_loop_constructs_with_valid_params():
         threshold=0.45,
         interval_ms=500,
     )
-    assert loop.threshold == 0.45
-    assert loop.interval_ms == 500
-    assert loop.db is db
-    assert loop.servo is servo
+    assert loop._threshold == 0.45
+    assert loop._interval == 0.5
+    assert loop._db is db
+    assert loop._servo is servo
