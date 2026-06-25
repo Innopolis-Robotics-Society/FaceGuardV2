@@ -15,6 +15,7 @@ ML model quality.
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
@@ -65,7 +66,7 @@ def test_register_user_returns_user_with_id_and_embedding(db: FaceDatabase):
 
 def test_register_user_duplicate_name_raises(db: FaceDatabase):
     db.register_user("Alice", _rand_embedding(1))
-    with pytest.raises(Exception):  # sqlite3.IntegrityError
+    with pytest.raises(sqlite3.IntegrityError):
         db.register_user("Alice", _rand_embedding(2))
 
 

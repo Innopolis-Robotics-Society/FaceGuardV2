@@ -15,12 +15,13 @@ os.environ["SECRET_KEY"] = "test-secret-key-32-bytes-long!!"
 os.environ["ADMIN_PASSWORD"] = "testpass"
 os.environ["SERVO_MODE"] = "emulated"
 os.environ["SERVO_PIN"] = "18"
-os.environ["SERVO_OPEN_DURATION_SEC"] = "0.05"
+os.environ["SERVO_OPEN_DURATION_SEC"] = "0.1"
 os.environ["ML_SERVICE_URL"] = "http://localhost:8001"
 os.environ["LOG_LEVEL"] = "DEBUG"
 
-import pytest
-from fastapi.testclient import TestClient
+# noqa: E402 - imports must be after sys.path and env patches
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 
 
 @pytest.fixture
@@ -39,6 +40,7 @@ def client(tmp_path, monkeypatch):
 
     monkeypatch.setattr(app.ml_client.MLClient, "start", fake_ml_start)
     monkeypatch.setattr(app.ml_client.MLClient, "close", fake_ml_close)
+
     import app.recognition
 
     async def fake_loop_start(self):

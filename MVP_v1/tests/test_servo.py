@@ -17,10 +17,10 @@ def test_emulated_servo_starts_closed():
 
 @pytest.mark.qrt
 def test_emulated_servo_opens_then_closes():
-    s = EmulatedServo(open_duration_sec=0.05)
+    s = EmulatedServo(open_duration_sec=0.1)
     s.open()
     assert s.is_open is True
-    time.sleep(0.1)
+    time.sleep(0.2)
     assert s.is_open is False
     assert s.last_event["action"] == "closed"
 

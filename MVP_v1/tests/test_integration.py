@@ -21,7 +21,7 @@ def test_login_form_renders(client):
 
 @pytest.mark.integration
 def test_login_and_logout_flow(client):
-    resp = client.post("/login", data={"username": "admin", "password": "admin"})
+    resp = client.post("/login", data={"username": "admin", "password": "testpass"})
     assert resp.status_code in (302, 200)
 
     if resp.status_code == 302:
