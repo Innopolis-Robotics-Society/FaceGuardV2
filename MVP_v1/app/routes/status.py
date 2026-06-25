@@ -37,7 +37,7 @@ async def status_events(
                 try:
                     payload = await asyncio.wait_for(queue.get(), timeout=15.0)
                     yield {"event": "verdict", "data": json.dumps(payload)}
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Heartbeat keeps the connection alive through proxies.
                     yield {"event": "ping", "data": "{}"}
         finally:

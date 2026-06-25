@@ -62,7 +62,7 @@ class MLClient:
         self._client: httpx.AsyncClient | None = None
         self._timeout = timeout
 
-    async def __aenter__(self) -> "MLClient":
+    async def __aenter__(self) -> MLClient:
         await self.start()
         return self
 

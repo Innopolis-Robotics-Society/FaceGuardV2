@@ -11,7 +11,7 @@ import logging
 
 import numpy as np
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from ..auth import require_admin
@@ -19,7 +19,6 @@ from ..config import Settings, get_settings
 from ..database import FaceDatabase
 from ..ml_client import MLClient
 from ..recognition import register_one
-from ..state import state
 
 log = logging.getLogger(__name__)
 router = APIRouter()

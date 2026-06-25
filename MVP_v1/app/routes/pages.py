@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from ..auth import require_admin

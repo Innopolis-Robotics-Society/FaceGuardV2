@@ -15,7 +15,7 @@ ML model quality.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pytest
@@ -90,9 +90,9 @@ def test_delete_user(db: FaceDatabase):
 
 
 def test_register_guest_for_days_sets_correct_expiry(db: FaceDatabase):
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     guest = db.register_guest_for_days("Courier", _rand_embedding(1), days=7)
-    after = datetime.now(timezone.utc)
+    after = datetime.now(UTC)
 
     # Expiry should be ~7 days from now.
     assert before + timedelta(days=7) <= guest.expires_at <= after + timedelta(days=7)
@@ -102,7 +102,7 @@ def test_list_guests_excludes_expired_by_default(db: FaceDatabase):
     # Active guest (expires in 1 day).
     db.register_guest_for_days("Active", _rand_embedding(1), days=1)
     # Expired guest (expires in the past).
-    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    past = datetime.now(UTC) - timedelta(hours=1)
     db.register_guest("Expired", _rand_embedding(2), past)
 
     visible = db.list_guests()
@@ -113,7 +113,7 @@ def test_list_guests_excludes_expired_by_default(db: FaceDatabase):
 
 
 def test_purge_expired_guests_returns_count(db: FaceDatabase):
-    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    past = datetime.now(UTC) - timedelta(hours=1)
     db.register_guest("A", _rand_embedding(1), past)
     db.register_guest("B", _rand_embedding(2), past)
     db.register_guest_for_days("C", _rand_embedding(3), days=1)
@@ -167,7 +167,7 @@ def test_recognize_picks_best_match_when_multiple_users(db: FaceDatabase):
 @pytest.mark.qrt
 def test_recognize_ignores_expired_guests(db: FaceDatabase):
     """An expired guest must NOT match — and must be purged during the call."""
-    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    past = datetime.now(UTC) - timedelta(hours=1)
     expired_emb = _rand_embedding(5)
     db.register_guest("OldVisitor", expired_emb, past)
 

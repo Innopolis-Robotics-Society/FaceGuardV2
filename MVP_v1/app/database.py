@@ -14,9 +14,8 @@ from __future__ import annotations
 
 import sqlite3
 import threading
-from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -107,8 +106,8 @@ def _decode_embedding(blob: bytes) -> np.ndarray:
 
 def _to_iso(dt: datetime) -> str:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).isoformat()
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC).isoformat()
 
 
 def _from_iso(value: str) -> datetime:
@@ -126,7 +125,7 @@ def _from_iso(value: str) -> datetime:
         # Fallback for SQLite's bare "YYYY-MM-DD HH:MM:SS" format.
         dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
 
@@ -170,7 +169,7 @@ class FaceDatabase:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "FaceDatabase":
+    def __enter__(self) -> FaceDatabase:
         return self
 
     def __exit__(self, *exc) -> None:
@@ -238,7 +237,7 @@ class FaceDatabase:
         expires_at: datetime,
     ) -> Guest:
         if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            expires_at = expires_at.replace(tzinfo=UTC)
         blob = _encode_embedding(embedding)
         with self._lock:
             cur = self._conn.execute(
@@ -257,7 +256,7 @@ class FaceDatabase:
     ) -> Guest:
         """Convenience: register a guest whose access expires in N days
         from now (UTC)."""
-        expires = datetime.now(timezone.utc) + timedelta(days=days)
+        expires = datetime.now(UTC) + timedelta(days=days)
         return self.register_guest(name, embedding, expires)
 
     def get_guest(self, guest_id: int) -> Guest | None:
@@ -274,7 +273,7 @@ class FaceDatabase:
                     "SELECT * FROM guests ORDER BY expires_at ASC"
                 ).fetchall()
             else:
-                now_iso = _to_iso(datetime.now(timezone.utc))
+                now_iso = _to_iso(datetime.now(UTC))
                 rows = self._conn.execute(
                     "SELECT * FROM guests WHERE expires_at > ? "
                     "ORDER BY expires_at ASC",
@@ -296,7 +295,7 @@ class FaceDatabase:
         Returns the number of rows deleted. Called lazily by
         `recognize()` and periodically by the recognition loop.
         """
-        now_iso = _to_iso(datetime.now(timezone.utc))
+        now_iso = _to_iso(datetime.now(UTC))
         with self._lock:
             cur = self._conn.execute(
                 "DELETE FROM guests WHERE expires_at < ?", (now_iso,)
@@ -380,7 +379,7 @@ class FaceDatabase:
             user_rows = self._conn.execute(
                 "SELECT id, name, embedding FROM users"
             ).fetchall()
-            now_iso = _to_iso(datetime.now(timezone.utc))
+            now_iso = _to_iso(datetime.now(UTC))
             guest_rows = self._conn.execute(
                 "SELECT id, name, embedding FROM guests WHERE expires_at > ?",
                 (now_iso,),
@@ -500,7 +499,7 @@ class FaceDatabase:
             users = self._conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()
             guests = self._conn.execute(
                 "SELECT COUNT(*) AS n FROM guests WHERE expires_at > ?",
-                (_to_iso(datetime.now(timezone.utc)),),
+                (_to_iso(datetime.now(UTC)),),
             ).fetchone()
             logs = self._conn.execute("SELECT COUNT(*) AS n FROM logs").fetchone()
         return {

@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
 
 import numpy as np
 
@@ -60,7 +59,7 @@ class RecognitionLoop:
         if self._task and not self._task.done():
             try:
                 await asyncio.wait_for(self._task, timeout=5.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._task.cancel()
 
     async def _run(self) -> None:
@@ -75,7 +74,7 @@ class RecognitionLoop:
                 )
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._interval)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
         log.info("Recognition loop stopped")
 
