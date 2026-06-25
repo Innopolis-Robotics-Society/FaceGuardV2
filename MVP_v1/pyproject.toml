@@ -25,7 +25,10 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
     "ruff",
+    "pip-audit",
+    "mypy",
 ]
 
 [tool.ruff]
@@ -39,3 +42,15 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "integration: Integration tests (TestClient + DB)",
+    "qrt: Quality Requirement Test",
+]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
