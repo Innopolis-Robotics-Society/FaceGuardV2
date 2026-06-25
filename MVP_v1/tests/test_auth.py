@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import pytest
+
 from app.auth import hash_password, verify_password
 
 
+@pytest.mark.qrt
 def test_hash_and_verify_roundtrip():
     plain = "correct horse battery staple"
     h = hash_password(plain)
@@ -12,6 +15,7 @@ def test_hash_and_verify_roundtrip():
     assert verify_password(plain, h) is True
 
 
+@pytest.mark.qrt
 def test_verify_rejects_wrong_password():
     h = hash_password("hunter2")
     assert verify_password("wrong", h) is False

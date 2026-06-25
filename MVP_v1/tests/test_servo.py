@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from app.servo import EmulatedServo, make_servo
 
 
@@ -13,11 +15,12 @@ def test_emulated_servo_starts_closed():
     assert s.mode == "emulated"
 
 
+@pytest.mark.qrt
 def test_emulated_servo_opens_then_closes():
     s = EmulatedServo(open_duration_sec=0.05)
     s.open()
     assert s.is_open is True
-    time.sleep(0.1)  # longer than open_duration
+    time.sleep(0.1)
     assert s.is_open is False
     assert s.last_event["action"] == "closed"
 
@@ -40,8 +43,9 @@ def test_make_servo_returns_emulated_by_default():
     assert s.mode == "emulated"
 
 
+@pytest.mark.qrt
 def test_make_servo_falls_back_when_gpio_unavailable(monkeypatch):
-    """On x86, gpiozero isn't installed — make_servo must fall back gracefully."""
+    """On x86, gpiozero isn't installed - make_servo must fall back gracefully"""
     import builtins
 
     real_import = builtins.__import__
@@ -59,4 +63,4 @@ def test_make_servo_falls_back_when_gpio_unavailable(monkeypatch):
         servo_open_duration_sec = 0.5
 
     s = make_servo(FakeSettings())
-    assert s.mode == "emulated"  # fell back
+    assert s.mode == "emulated"
