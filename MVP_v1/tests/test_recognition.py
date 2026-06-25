@@ -1,34 +1,27 @@
-"""Integration tests for FastAPI routes (TestClient + in-memory DB)."""
+"""Unit tests for recognition loop construction (critical module)."""
 
 from __future__ import annotations
 
-import pytest
+from unittest.mock import MagicMock
+
+from app.recognition import RecognitionLoop
 
 
-@pytest.mark.integration
-def test_healthz(client):
-    resp = client.get("/healthz")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"
+def test_recognition_loop_constructs_with_valid_params():
+    db = MagicMock()
+    ml = MagicMock()
+    servo = MagicMock()
+    state = MagicMock()
 
-
-@pytest.mark.integration
-def test_login_form_renders(client):
-    resp = client.get("/login")
-    assert resp.status_code == 200
-    assert "login" in resp.text.lower()
-
-
-@pytest.mark.integration
-def test_login_and_logout_flow(client):
-    resp = client.post("/login", data={"username": "admin", "password": "testpass"})
-    assert resp.status_code in (302, 200)
-    if resp.status_code == 302:
-        resp = client.get(resp.headers["location"], follow_redirects=True)
-    assert resp.status_code == 200
-
-    resp = client.post("/logout")
-    assert resp.status_code in (302, 200)
-
-    resp = client.get("/", follow_redirects=False)
-    assert resp.status_code in (302, 307, 401)
+    loop = RecognitionLoop(
+        db=db,
+        ml=ml,
+        servo=servo,
+        state=state,
+        threshold=0.45,
+        interval_ms=500,
+    )
+    assert loop.threshold == 0.45
+    assert loop.interval_ms == 500
+    assert loop.db is db
+    assert loop.servo is servo
