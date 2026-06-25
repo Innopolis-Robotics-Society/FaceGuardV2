@@ -22,9 +22,9 @@ async def dashboard(
     counts = db.counts()
     snapshot = state.snapshot()
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
         {
-            "request": request,
             "counts": counts,
             "snapshot": snapshot,
         },
@@ -40,9 +40,9 @@ async def users_page(
     users = db.list_users()
     guests = db.list_guests(include_expired=False)
     return templates.TemplateResponse(
+        request,
         "users.html",
         {
-            "request": request,
             "users": users,
             "guests": guests,
         },
@@ -55,10 +55,10 @@ async def register_page(
     _admin=Depends(require_admin),
 ):
     return templates.TemplateResponse(
+        request,
         "register.html",
         {
-            "request": request,
-            "frame_count": 5,  # default; overridden by settings in real flow
+            "frame_count": 5,
         },
     )
 
@@ -73,9 +73,9 @@ async def logs_page(
 ):
     entries = db.list_logs(limit=300, today_only=today, user_filter=q)
     return templates.TemplateResponse(
+        request,
         "logs.html",
         {
-            "request": request,
             "entries": entries,
             "today_filter": today,
             "query": q or "",
@@ -89,20 +89,19 @@ async def register_options(
     request: Request,
     _admin=Depends(require_admin),
 ):
-    """Return the partial form fragment for the selected access type."""
     if kind == "temporary":
         return templates.TemplateResponse(
+            request,
             "partials/guest_options.html",
-            {"request": request},
+            {},
         )
-    # Permanent — no extra fields needed.
     return templates.TemplateResponse(
+        request,
         "partials/guest_options.html",
-        {"request": request},
+        {},
     )
 
 
 @router.get("/healthz")
 async def healthz():
-    """Unauthenticated health probe (for Docker / load balancer)."""
     return {"status": "ok"}

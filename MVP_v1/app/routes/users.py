@@ -25,11 +25,6 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
-# ---------------------------------------------------------------------------
-# Delete endpoints (no ML involvement — pure DB ops).
-# ---------------------------------------------------------------------------
-
-
 @router.post("/users/{user_id}/delete")
 async def delete_user(
     user_id: int,
@@ -58,16 +53,11 @@ async def purge_guests(_admin=Depends(require_admin), db: FaceDatabase = Depends
     return {"purged": n}
 
 
-# ---------------------------------------------------------------------------
-# Registration endpoint — triggers 5-frame capture from ML service.
-# ---------------------------------------------------------------------------
-
-
 @router.post("/register")
 async def register(
     request: Request,
     name: str = Form(...),
-    access_type: str = Form(...),  # "permanent" | "temporary"
+    access_type: str = Form(...),
     guest_days: int | None = Form(None),
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
@@ -85,12 +75,11 @@ async def register(
             detail="Temporary access requires a positive number of days",
         )
 
-    # Dedupe check — better UX than hitting the SQLite IntegrityError.
     if not is_guest and db.get_user_by_name(name) is not None:
         return templates.TemplateResponse(
+            request,
             "partials/register_result.html",
             {
-                "request": request,
                 "ok": False,
                 "message": f"User '{name}' already exists.",
             },
@@ -111,9 +100,9 @@ async def register(
     except RuntimeError as e:
         log.warning("Registration failed: %s", e)
         return templates.TemplateResponse(
+            request,
             "partials/register_result.html",
             {
-                "request": request,
                 "ok": False,
                 "message": str(e),
             },
@@ -122,9 +111,9 @@ async def register(
     except Exception as e:
         log.exception("Unexpected registration error")
         return templates.TemplateResponse(
+            request,
             "partials/register_result.html",
             {
-                "request": request,
                 "ok": False,
                 "message": f"Unexpected error: {e}",
             },
@@ -132,21 +121,14 @@ async def register(
         )
 
     return templates.TemplateResponse(
+        request,
         "partials/register_result.html",
         {
-            "request": request,
             "ok": True,
             "message": msg,
             "preview": preview,
         },
     )
-
-
-# ---------------------------------------------------------------------------
-# Hidden debug endpoint — generate a synthetic embedding for offline dev.
-# Useful when no camera is available but you want to seed the DB.
-# Disabled in production via env flag (default off).
-# ---------------------------------------------------------------------------
 
 
 @router.post("/debug/seed-user")
@@ -158,7 +140,6 @@ async def debug_seed_user(
 ):
     if not getattr(settings, "allow_debug_seed", False):
         raise HTTPException(status_code=404)
-    # Deterministic pseudo-embedding from the name (no real randomness).
     rng = np.random.default_rng(abs(hash(name)) % (2**32))
     emb = rng.standard_normal(512).astype(np.float32)
     emb = emb / np.linalg.norm(emb)
