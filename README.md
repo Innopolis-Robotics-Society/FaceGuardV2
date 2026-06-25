@@ -58,6 +58,19 @@ docker compose up --build
 
 ---
 
+## Definition of Done
+
+A PBI is marked Done only when:
+
+1. Code is merged to `main` via PR.
+2. All CI checks on the PR are passing: lint, format/type, build, unit tests, integration tests, coverage, automated QRTs, additional QA check.
+3. Critical modules affected by the PBI have ≥30% line coverage (evidenced in `docs/testing.md`).
+4. Relevant quality requirement tests pass (`pytest -m qrt`).
+5. `docs/testing.md` is updated if the change affects critical modules, test scope, or QA status.
+6. For later assignments: ADRs updated if architecture changed.
+
+---
+
 ## License
 
 [MIT](LICENSE)
