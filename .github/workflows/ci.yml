@@ -69,6 +69,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pip-audit || true
+      - run: pip install pip-audit
       - run: pip install -e .
-      - run: pip-audit --desc
+      - run: pip freeze | grep -v "^faceguard-backend" > /tmp/req.txt
+      - run: pip-audit --desc -r /tmp/req.txt

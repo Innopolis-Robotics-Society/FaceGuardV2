@@ -43,4 +43,4 @@
 |---|---|---|---|
 | Customer UAT on Raspberry Pi 4 | End-to-end recognition + servo actuation (US-001, US-006) | Not yet performed | — |
 
-| Dependencies with known vulnerabilities may expose the Raspberry Pi deployment to avoidable risk. | `pip-audit` scans Python dependencies against the PyPI vulnerability database. | `pyproject.toml` / installed packages | **21 vulnerabilities found** (jinja2, pillow, python-multipart, starlette) — see CI log for details | [CI run](...) | Fix versions identified; upgrade tracked in follow-up issue. |
+| Dependencies with known vulnerabilities may expose the Raspberry Pi deployment to avoidable risk. | `pip-audit` scans Python dependencies against the PyPI vulnerability database. | `pyproject.toml` / installed packages | **21 vulnerabilities found** (jinja2, pillow, python-multipart, starlette) — see CI log for details | CI run | Fix versions identified; upgrade tracked in follow-up issue. |
