@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [1.0.0] - 2026-06-21
-[1.0.0]: https://github.com/ORG/REPO/releases/tag/v1.0.0
+[1.0.0]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v1.0.0
 
 ### Added
 - `MVP_v1/` — FastAPI backend with SQLite data access layer, session-based
