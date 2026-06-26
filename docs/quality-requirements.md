@@ -1,49 +1,79 @@
 # Quality Requirements
 
-FaceGuard quality requirements.
+FaceGuardV2 quality requirements for Assignment 4.
 
-## QR-001: Recognition response time
+## QR index
 
-**ISO/IEC 25010 sub-characteristic:** Time behaviour
-
-**Scenario:** When the backend receives a valid face embedding from the ML service under the standard Docker Compose environment, the system shall produce an access verdict within 1 second for at least 95% of automated test attempts.
-
-**Why this matters:** Access control must respond quickly so a recognized user is not blocked at the door.
-
-**Traceability:** Recognition pipeline, ML service integration, access decision.
-
-**Linked quality requirement tests:** [QRT-001](quality-requirement-tests.md#qrt-001-recognition-response-time)
+| QR ID | Title | ISO/IEC 25010 sub-characteristic | Linked QRT |
+|---|---|---|---|
+| QR-001 | Correct face recognition decision | Functional correctness | QRT-001, QRT-002, QRT-003 |
+| QR-002 | Expired guest access denial | Integrity | QRT-004 |
+| QR-003 | Secure password verification | Confidentiality | QRT-005 |
+| QR-004 | Servo emulator operability | Operability | QRT-006 |
+| QR-005 | Recognition audit logging | Accountability | QRT-007 |
 
 ---
 
-## QR-002: Low-confidence access denial
+## QR-001: Correct face recognition decision
+
+**ISO/IEC 25010 sub-characteristic:** Functional correctness
+
+**Scenario:** When the database recognition function receives a face embedding under the automated test environment, it shall return the registered user above threshold, return unknown below threshold, and select the best match when several users exist.
+
+**Why this matters:** FaceGuardV2 must make correct access decisions based on face embeddings.
+
+**Linked quality requirement tests:** [QRT-001](quality-requirement-tests.md#qrt-001-registered-user-recognition), [QRT-002](quality-requirement-tests.md#qrt-002-unknown-user-below-threshold), [QRT-003](quality-requirement-tests.md#qrt-003-best-match-selection)
+
+---
+
+## QR-002: Expired guest access denial
 
 **ISO/IEC 25010 sub-characteristic:** Integrity
 
-**Scenario:** When the ML service returns no face, an unknown face, or a similarity score below the configured recognition threshold under the backend test environment, the system shall keep the door closed and make zero servo-open calls in 100% of automated test cases. No-face frames shall leave the system in `idle`; unknown or below-threshold faces shall return `denied`.
+**Scenario:** When recognition finds a guest whose access period has expired under the automated test environment, the system shall not grant access to that guest.
 
-**Why this matters:** The system must not unlock the door for unknown or low-confidence users.
+**Why this matters:** Expired guest permissions must not allow unauthorized access.
 
-**Traceability:** No-face handling, threshold comparison, access decision, servo control.
-
-**Linked quality requirement tests:** [QRT-002](quality-requirement-tests.md#qrt-002-low-confidence-access-denial)
+**Linked quality requirement tests:** [QRT-004](quality-requirement-tests.md#qrt-004-expired-guest-denial)
 
 ---
 
-## QR-003: Safe backend behavior during ML failure
+## QR-003: Secure password verification
 
-**ISO/IEC 25010 sub-characteristic:** Fault tolerance
+**ISO/IEC 25010 sub-characteristic:** Confidentiality
 
-**Scenario:** When the ML service is unavailable, unhealthy, or returns no latest frame under the backend integration test environment, the backend shall stay running, return an `error` verdict, keep the door closed, and make zero servo-open calls.
+**Scenario:** When a password is hashed under the automated test environment, the system shall verify the correct password and reject an incorrect password without storing or comparing plain text passwords.
 
-**Why this matters:** If the ML service fails, the system must fail safely instead of crashing or unlocking the door.
+**Why this matters:** Admin authentication must protect credentials.
 
-**Traceability:** ML health check, ML client latest-frame handling, recognition loop, safe access decision.
+**Linked quality requirement tests:** [QRT-005](quality-requirement-tests.md#qrt-005-password-hash-verification)
 
-**Linked quality requirement tests:** [QRT-003](quality-requirement-tests.md#qrt-003-safe-backend-behavior-during-ml-failure)
+---
+
+## QR-004: Servo emulator operability
+
+**ISO/IEC 25010 sub-characteristic:** Operability
+
+**Scenario:** When the emulated servo is opened and then closed under the automated test environment, it shall correctly switch between open and closed states.
+
+**Why this matters:** The team and customer must be able to test access-control behavior without physical hardware.
+
+**Linked quality requirement tests:** [QRT-006](quality-requirement-tests.md#qrt-006-emulated-servo-open-close)
+
+---
+
+## QR-005: Recognition audit logging
+
+**ISO/IEC 25010 sub-characteristic:** Accountability
+
+**Scenario:** When recognition is executed under the automated test environment, the system shall write an audit log entry for the access attempt.
+
+**Why this matters:** Access attempts must be traceable for review and security analysis.
+
+**Linked quality requirement tests:** [QRT-007](quality-requirement-tests.md#qrt-007-recognition-audit-log)
 
 ---
 
 ## Maintenance
 
-These quality requirements are maintained project assets. If product logic, CI, or architecture changes, update this file and `quality-requirement-tests.md`.
+These quality requirements are maintained project assets. If tests, access logic, authentication, or servo behavior change, update this file and `docs/quality-requirement-tests.md`.
