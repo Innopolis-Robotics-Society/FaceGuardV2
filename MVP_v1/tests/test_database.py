@@ -15,7 +15,8 @@ ML model quality.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+import sqlite3
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pytest
@@ -65,7 +66,7 @@ def test_register_user_returns_user_with_id_and_embedding(db: FaceDatabase):
 
 def test_register_user_duplicate_name_raises(db: FaceDatabase):
     db.register_user("Alice", _rand_embedding(1))
-    with pytest.raises(Exception):  # sqlite3.IntegrityError
+    with pytest.raises(sqlite3.IntegrityError):
         db.register_user("Alice", _rand_embedding(2))
 
 
@@ -90,9 +91,9 @@ def test_delete_user(db: FaceDatabase):
 
 
 def test_register_guest_for_days_sets_correct_expiry(db: FaceDatabase):
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     guest = db.register_guest_for_days("Courier", _rand_embedding(1), days=7)
-    after = datetime.now(timezone.utc)
+    after = datetime.now(UTC)
 
     # Expiry should be ~7 days from now.
     assert before + timedelta(days=7) <= guest.expires_at <= after + timedelta(days=7)
@@ -102,7 +103,7 @@ def test_list_guests_excludes_expired_by_default(db: FaceDatabase):
     # Active guest (expires in 1 day).
     db.register_guest_for_days("Active", _rand_embedding(1), days=1)
     # Expired guest (expires in the past).
-    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    past = datetime.now(UTC) - timedelta(hours=1)
     db.register_guest("Expired", _rand_embedding(2), past)
 
     visible = db.list_guests()
@@ -113,7 +114,7 @@ def test_list_guests_excludes_expired_by_default(db: FaceDatabase):
 
 
 def test_purge_expired_guests_returns_count(db: FaceDatabase):
-    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    past = datetime.now(UTC) - timedelta(hours=1)
     db.register_guest("A", _rand_embedding(1), past)
     db.register_guest("B", _rand_embedding(2), past)
     db.register_guest_for_days("C", _rand_embedding(3), days=1)
@@ -128,6 +129,7 @@ def test_purge_expired_guests_returns_count(db: FaceDatabase):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.qrt
 def test_recognize_matches_registered_user_above_threshold(db: FaceDatabase):
     emb = _rand_embedding(42)
     db.register_user("Alice", emb)
@@ -140,6 +142,7 @@ def test_recognize_matches_registered_user_above_threshold(db: FaceDatabase):
     assert result.matched_user_id is not None
 
 
+@pytest.mark.qrt
 def test_recognize_returns_unknown_below_threshold(db: FaceDatabase):
     db.register_user("Alice", _rand_embedding(1))
     probe = _rand_embedding(999)  # very different
@@ -149,6 +152,7 @@ def test_recognize_returns_unknown_below_threshold(db: FaceDatabase):
     assert result.matched_user_id is None
 
 
+@pytest.mark.qrt
 def test_recognize_picks_best_match_when_multiple_users(db: FaceDatabase):
     alice_emb = _rand_embedding(1)
     bob_emb = _rand_embedding(2)
@@ -161,9 +165,10 @@ def test_recognize_picks_best_match_when_multiple_users(db: FaceDatabase):
     assert result.access_type == "user"
 
 
+@pytest.mark.qrt
 def test_recognize_ignores_expired_guests(db: FaceDatabase):
     """An expired guest must NOT match — and must be purged during the call."""
-    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    past = datetime.now(UTC) - timedelta(hours=1)
     expired_emb = _rand_embedding(5)
     db.register_guest("OldVisitor", expired_emb, past)
 
@@ -173,6 +178,7 @@ def test_recognize_ignores_expired_guests(db: FaceDatabase):
     assert result.access_type == "unknown"
 
 
+@pytest.mark.qrt
 def test_recognize_matches_active_guest(db: FaceDatabase):
     guest_emb = _rand_embedding(7)
     db.register_guest_for_days("Visitor", guest_emb, days=1)
@@ -182,6 +188,7 @@ def test_recognize_matches_active_guest(db: FaceDatabase):
     assert result.access_type == "guest"
 
 
+@pytest.mark.qrt
 def test_recognize_writes_audit_log(db: FaceDatabase):
     emb = _rand_embedding(1)
     db.register_user("Alice", emb)
@@ -257,6 +264,7 @@ def test_list_logs_filters_by_name(db: FaceDatabase):
 def test_list_logs_today_filter_isolates_old_entries(db: FaceDatabase, tmp_path):
     """We insert an old entry directly via SQL to test DATE() filtering."""
     import sqlite3
+
     conn = sqlite3.connect(str(tmp_path / "test.db"))
     # Don't re-create the schema — the FaceDatabase already did.
     conn.close()

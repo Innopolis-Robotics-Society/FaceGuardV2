@@ -16,7 +16,6 @@ from fastapi import Depends, HTTPException, Request, status
 
 from .database import Admin, FaceDatabase
 
-
 # Cookie lifetime — 12h. Long enough for an admin shift, short enough to
 # expire if the laptop is left open.
 SESSION_MAX_AGE_SECONDS = 12 * 3600

@@ -1,3 +1,10 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
 [project]
 name = "faceguard-backend"
 version = "0.1.0"
@@ -7,26 +14,46 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 
 dependencies = [
-    "fastapi==0.115.6",
-    "uvicorn[standard]==0.34.0",
-    "jinja2==3.1.5",
-    "python-multipart==0.0.20",
-    "httpx==0.28.1",
-    "numpy==2.2.1",
-    "bcrypt==4.2.1",
-    "itsdangerous==2.2.0",
-    "pydantic==2.10.4",
-    "pydantic-settings==2.7.1",
-    "sse-starlette==2.1.3",
-    "Pillow==11.0.0",
+    "fastapi>=0.133.0",
+    "starlette>=1.3.1",
+    "sse-starlette>=3.4.0",
+    "uvicorn[standard]>=0.34.0",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.31",
+    "httpx>=0.28.1",
+    "numpy>=2.2.1",
+    "bcrypt>=4.2.1",
+    "itsdangerous>=2.2.0",
+    "pydantic>=2.10.4",
+    "pydantic-settings>=2.7.1",
+    "Pillow>=12.2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "pytest-asyncio",
-    "ruff",
+ "pytest",
+ "pytest-asyncio",
+ "pytest-cov",
+ "ruff",
+ "pip-audit",
+ "mypy",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: Integration tests (TestClient + DB)",
+    "qrt: Quality Requirement Test",
+]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
 
 [tool.ruff]
 line-length = 100
@@ -34,8 +61,4 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
-ignore = ["E501"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"
+ignore = ["E501", "B008"]

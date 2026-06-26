@@ -17,11 +17,10 @@ import asyncio
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from .database import AccessType
-
 
 Verdict = Literal["granted", "denied", "scanning", "idle", "error"]
 
@@ -52,9 +51,7 @@ class CurrentVerdict:
             "score": round(self.score, 4),
             "access_type": self.access_type,
             "matched_user_id": self.matched_user_id,
-            "timestamp": datetime.fromtimestamp(
-                self.timestamp, tz=timezone.utc
-            ).isoformat(),
+            "timestamp": datetime.fromtimestamp(self.timestamp, tz=UTC).isoformat(),
             "is_door_open": self.verdict == "granted",
         }
 

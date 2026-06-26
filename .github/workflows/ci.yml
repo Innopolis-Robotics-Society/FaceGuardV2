@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-type:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./MVP_v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff mypy
+      - run: ruff check app/ ml_stub/ tests/
+      - run: ruff format --check app/ ml_stub/ tests/
+      - run: mypy app/ --ignore-missing-imports || true
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f MVP_v1/Dockerfile -t faceguard-backend:latest MVP_v1/
+
+  test-and-coverage:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./MVP_v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: pytest --cov=app --cov-report=xml --cov-report=term-missing -m "not qrt" -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: MVP_v1/coverage.xml
+
+  quality-requirement-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./MVP_v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - run: pytest -m qrt -v
+
+  additional-qa:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./MVP_v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit
+      - run: pip install -e .
+      - run: pip freeze | grep -v "^faceguard-backend" > /tmp/req.txt
+      - run: pip-audit --desc -r /tmp/req.txt

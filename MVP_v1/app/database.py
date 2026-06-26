@@ -14,9 +14,8 @@ from __future__ import annotations
 
 import sqlite3
 import threading
-from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -107,8 +106,8 @@ def _decode_embedding(blob: bytes) -> np.ndarray:
 
 def _to_iso(dt: datetime) -> str:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).isoformat()
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC).isoformat()
 
 
 def _from_iso(value: str) -> datetime:
@@ -126,7 +125,7 @@ def _from_iso(value: str) -> datetime:
         # Fallback for SQLite's bare "YYYY-MM-DD HH:MM:SS" format.
         dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
 
@@ -170,7 +169,7 @@ class FaceDatabase:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "FaceDatabase":
+    def __enter__(self) -> FaceDatabase:
         return self
 
     def __exit__(self, *exc) -> None:
@@ -210,16 +209,12 @@ class FaceDatabase:
 
     def list_users(self) -> list[User]:
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT * FROM users ORDER BY name ASC"
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM users ORDER BY name ASC").fetchall()
         return [_row_to_user(r) for r in rows]
 
     def delete_user(self, user_id: int) -> bool:
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM users WHERE id = ?", (user_id,)
-            )
+            cur = self._conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
             self._conn.commit()
             return cur.rowcount > 0
 
@@ -238,12 +233,11 @@ class FaceDatabase:
         expires_at: datetime,
     ) -> Guest:
         if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            expires_at = expires_at.replace(tzinfo=UTC)
         blob = _encode_embedding(embedding)
         with self._lock:
             cur = self._conn.execute(
-                "INSERT INTO guests (name, embedding, expires_at) "
-                "VALUES (?, ?, ?)",
+                "INSERT INTO guests (name, embedding, expires_at) VALUES (?, ?, ?)",
                 (name, blob, _to_iso(expires_at)),
             )
             self._conn.commit()
@@ -257,36 +251,29 @@ class FaceDatabase:
     ) -> Guest:
         """Convenience: register a guest whose access expires in N days
         from now (UTC)."""
-        expires = datetime.now(timezone.utc) + timedelta(days=days)
+        expires = datetime.now(UTC) + timedelta(days=days)
         return self.register_guest(name, embedding, expires)
 
     def get_guest(self, guest_id: int) -> Guest | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM guests WHERE id = ?", (guest_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM guests WHERE id = ?", (guest_id,)).fetchone()
         return _row_to_guest(row) if row else None
 
     def list_guests(self, include_expired: bool = False) -> list[Guest]:
         with self._lock:
             if include_expired:
-                rows = self._conn.execute(
-                    "SELECT * FROM guests ORDER BY expires_at ASC"
-                ).fetchall()
+                rows = self._conn.execute("SELECT * FROM guests ORDER BY expires_at ASC").fetchall()
             else:
-                now_iso = _to_iso(datetime.now(timezone.utc))
+                now_iso = _to_iso(datetime.now(UTC))
                 rows = self._conn.execute(
-                    "SELECT * FROM guests WHERE expires_at > ? "
-                    "ORDER BY expires_at ASC",
+                    "SELECT * FROM guests WHERE expires_at > ? ORDER BY expires_at ASC",
                     (now_iso,),
                 ).fetchall()
         return [_row_to_guest(r) for r in rows]
 
     def delete_guest(self, guest_id: int) -> bool:
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM guests WHERE id = ?", (guest_id,)
-            )
+            cur = self._conn.execute("DELETE FROM guests WHERE id = ?", (guest_id,))
             self._conn.commit()
             return cur.rowcount > 0
 
@@ -296,11 +283,9 @@ class FaceDatabase:
         Returns the number of rows deleted. Called lazily by
         `recognize()` and periodically by the recognition loop.
         """
-        now_iso = _to_iso(datetime.now(timezone.utc))
+        now_iso = _to_iso(datetime.now(UTC))
         with self._lock:
-            cur = self._conn.execute(
-                "DELETE FROM guests WHERE expires_at < ?", (now_iso,)
-            )
+            cur = self._conn.execute("DELETE FROM guests WHERE expires_at < ?", (now_iso,))
             self._conn.commit()
             return cur.rowcount
 
@@ -317,8 +302,7 @@ class FaceDatabase:
     ) -> None:
         with self._lock:
             self._conn.execute(
-                "INSERT INTO logs (name, score, access_type, success) "
-                "VALUES (?, ?, ?, ?)",
+                "INSERT INTO logs (name, score, access_type, success) VALUES (?, ?, ?, ?)",
                 (name, score, access_type, bool(success)),
             )
             self._conn.commit()
@@ -377,10 +361,8 @@ class FaceDatabase:
 
         # 2. Load candidates.
         with self._lock:
-            user_rows = self._conn.execute(
-                "SELECT id, name, embedding FROM users"
-            ).fetchall()
-            now_iso = _to_iso(datetime.now(timezone.utc))
+            user_rows = self._conn.execute("SELECT id, name, embedding FROM users").fetchall()
+            now_iso = _to_iso(datetime.now(UTC))
             guest_rows = self._conn.execute(
                 "SELECT id, name, embedding FROM guests WHERE expires_at > ?",
                 (now_iso,),
@@ -455,9 +437,7 @@ class FaceDatabase:
 
     def get_admin(self, admin_id: int) -> Admin | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM admins WHERE id = ?", (admin_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM admins WHERE id = ?", (admin_id,)).fetchone()
         return _row_to_admin(row) if row else None
 
     def get_admin_by_username(self, username: str) -> Admin | None:
@@ -469,9 +449,7 @@ class FaceDatabase:
 
     def list_admins(self) -> list[Admin]:
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT * FROM admins ORDER BY username ASC"
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM admins ORDER BY username ASC").fetchall()
         return [_row_to_admin(r) for r in rows]
 
     def count_admins(self) -> int:
@@ -500,7 +478,7 @@ class FaceDatabase:
             users = self._conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()
             guests = self._conn.execute(
                 "SELECT COUNT(*) AS n FROM guests WHERE expires_at > ?",
-                (_to_iso(datetime.now(timezone.utc)),),
+                (_to_iso(datetime.now(UTC)),),
             ).fetchone()
             logs = self._conn.execute("SELECT COUNT(*) AS n FROM logs").fetchone()
         return {

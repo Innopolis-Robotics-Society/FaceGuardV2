@@ -18,8 +18,9 @@ async def login_page(request: Request):
     if request.session.get("admin_id"):
         return RedirectResponse("/", status_code=303)
     return templates.TemplateResponse(
+        request,
         "login.html",
-        {"request": request, "error": None},
+        {"error": None},
     )
 
 
@@ -34,8 +35,9 @@ async def login_submit(
         admin = login(db, username, password)
     except Exception:
         return templates.TemplateResponse(
+            request,
             "login.html",
-            {"request": request, "error": "Invalid username or password"},
+            {"error": "Invalid username or password"},
             status_code=401,
         )
     start_session(request, admin)

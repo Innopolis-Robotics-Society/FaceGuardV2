@@ -25,7 +25,7 @@ from __future__ import annotations
 import io
 import math
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 from fastapi import FastAPI
@@ -40,7 +40,7 @@ EMB_DIM = 512
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _synthetic_embedding(seed: int) -> np.ndarray:
