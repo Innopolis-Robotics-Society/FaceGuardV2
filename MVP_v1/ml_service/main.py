@@ -36,8 +36,8 @@ def _now_iso() -> str:
 def init_model():
     """Load InsightFace model once at startup."""
     global face_app
-    face_app = FaceAnalysis(name="buffalo_l", root="./models")
-    face_app.prepare(ctx_id=0, det_size=(640, 480))
+    face_app = FaceAnalysis(name="buffalo_sc", root="./models")
+    face_app.prepare(ctx_id=-1, det_size=(640, 640))
     print("InsightFace model loaded")
 
 
@@ -47,7 +47,6 @@ def process_frame(frame: np.ndarray) -> tuple[bytes, dict]:
 
     # InsightFace detection
     faces = face_app.get(frame)
-
     # Draw on frame
     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img)
