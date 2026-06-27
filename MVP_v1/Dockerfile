@@ -6,14 +6,6 @@
 
 FROM python:3.11-slim AS base
 
-# System deps for OpenCV-less build (we don't need cv2 in the backend;
-# camera capture happens in the ML service). Pillow needs libjpeg.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        libjpeg62-turbo \
-        libgl1 \
-        libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
