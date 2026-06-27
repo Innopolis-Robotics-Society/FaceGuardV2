@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Query
 from fastapi.templating import Jinja2Templates
 
 from ..auth import require_admin
@@ -68,8 +68,8 @@ async def logs_page(
     request: Request,
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
-    today: bool = False,
-    q: str | None = None,
+    today: bool = Query(False),
+    q: str | None = Query(None),
 ):
     entries = db.list_logs(limit=300, today_only=today, user_filter=q)
     return templates.TemplateResponse(

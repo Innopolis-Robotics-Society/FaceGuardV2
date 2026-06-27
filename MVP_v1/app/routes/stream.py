@@ -31,5 +31,4 @@ async def stream(
     return StreamingResponse(
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame",
-        background=BackgroundTask(lambda: None),
     )

@@ -26,6 +26,7 @@ import io
 import math
 import time
 from datetime import UTC, datetime
+import asyncio
 
 import numpy as np
 from fastapi import FastAPI
@@ -125,7 +126,7 @@ async def ml_stream():
             )
             yield boundary + headers + jpg + b"\r\n"
             # 10 fps
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
 
     return StreamingResponse(
         generate(),
