@@ -172,11 +172,6 @@ app.dependency_overrides[FaceDatabase] = _db_dep
 app.dependency_overrides[MLClient] = _ml_dep
 
 
-@app.get("/healthz")
-async def root_healthz():
-    return {"status": "ok", "service": "faceguard-backend"}
-
-
 if __name__ == "__main__":
     import uvicorn
 

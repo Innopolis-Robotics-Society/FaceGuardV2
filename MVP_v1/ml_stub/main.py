@@ -22,6 +22,7 @@ Run:
 
 from __future__ import annotations
 
+import asyncio
 import io
 import math
 import time
@@ -125,7 +126,7 @@ async def ml_stream():
             )
             yield boundary + headers + jpg + b"\r\n"
             # 10 fps
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
 
     return StreamingResponse(
         generate(),

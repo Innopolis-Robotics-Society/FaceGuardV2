@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from starlette.background import BackgroundTask
 
 from ..auth import require_admin
 from ..ml_client import MLClient
@@ -31,5 +30,4 @@ async def stream(
     return StreamingResponse(
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame",
-        background=BackgroundTask(lambda: None),
     )
