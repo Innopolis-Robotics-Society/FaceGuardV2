@@ -22,11 +22,11 @@ Run:
 
 from __future__ import annotations
 
+import asyncio
 import io
 import math
 import time
 from datetime import UTC, datetime
-import asyncio
 
 import numpy as np
 from fastapi import FastAPI

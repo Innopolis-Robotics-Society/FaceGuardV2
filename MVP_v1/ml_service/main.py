@@ -5,25 +5,22 @@ Uses InsightFace (buffalo_l) for detection + 512-dim embeddings.
 """
 
 from __future__ import annotations
+
 import asyncio
 import io
-import time
-from datetime import datetime, timezone
-
-from contextlib import asynccontextmanager
 import threading
+import time
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
 import cv2
+
+# --- InsightFace ---
 import numpy as np
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-from PIL import Image, ImageDraw
-
-# --- InsightFace ---
-import insightface
 from insightface.app import FaceAnalysis
-
-
+from PIL import Image, ImageDraw
 
 # --- Globals ---
 face_app = None
@@ -33,7 +30,7 @@ latest_result = {"timestamp": "", "faces": []}
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def init_model():
@@ -47,43 +44,38 @@ def init_model():
 def process_frame(frame: np.ndarray) -> tuple[bytes, dict]:
     """Detect faces, draw boxes, return JPEG + metadata."""
     global face_app
-    
+
     # InsightFace detection
     faces = face_app.get(frame)
-    
+
     # Draw on frame
     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img)
-    
+
     face_data = []
     for face in faces:
         bbox = face.bbox.astype(int)
         # Draw rectangle
-        draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], 
-                      outline=(0, 255, 0), width=2)
-        draw.text((bbox[0], bbox[1] - 10), 
-                 f"{face.det_score:.2f}", fill=(0, 255, 0))
-        
+        draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], outline=(0, 255, 0), width=2)
+        draw.text((bbox[0], bbox[1] - 10), f"{face.det_score:.2f}", fill=(0, 255, 0))
+
         # Collect metadata
-        face_data.append({
-            "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
-            "embedding": face.embedding.tolist(),  # 512-dim, already L2-normalized
-            "confidence": float(face.det_score)
-        })
-    
+        face_data.append(
+            {
+                "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
+                "embedding": face.embedding.tolist(),  # 512-dim, already L2-normalized
+                "confidence": float(face.det_score),
+            }
+        )
+
     # Encode to JPEG
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
     jpeg_bytes = buf.getvalue()
-    
-    result = {
-        "timestamp": _now_iso(),
-        "faces": face_data
-    }
-    
+
+    result = {"timestamp": _now_iso(), "faces": face_data}
+
     return jpeg_bytes, result
-
-
 
 
 def capture_loop():
@@ -92,7 +84,7 @@ def capture_loop():
 
     cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
 
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
 
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
@@ -122,7 +114,9 @@ def capture_loop():
 
         time.sleep(0.066)
 
+
 # --- FastAPI endpoints ---
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -130,6 +124,7 @@ async def lifespan(app: FastAPI):
     thread = threading.Thread(target=capture_loop, daemon=True)
     thread.start()
     yield
+
 
 app = FastAPI(title="FaceGuard ML Service", version="1.0.0", lifespan=lifespan)
 
@@ -149,7 +144,7 @@ async def ml_latest():
 async def ml_stream():
     """MJPEG stream."""
     boundary = b"--frame\r\n"
-    
+
     async def generate():
         while True:
             if latest_frame is not None:
@@ -159,7 +154,7 @@ async def ml_stream():
                 )
                 yield boundary + headers + latest_frame + b"\r\n"
             await asyncio.sleep(0.066)  # ~15 fps
-    
+
     return StreamingResponse(
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame",
@@ -168,6 +163,5 @@ async def ml_stream():
 
 if __name__ == "__main__":
     import uvicorn
-    
-    
+
     uvicorn.run("main:app", host="0.0.0.0", port=8001)

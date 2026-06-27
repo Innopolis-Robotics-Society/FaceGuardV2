@@ -172,9 +172,6 @@ app.dependency_overrides[FaceDatabase] = _db_dep
 app.dependency_overrides[MLClient] = _ml_dep
 
 
-
-
-
 if __name__ == "__main__":
     import uvicorn
 
