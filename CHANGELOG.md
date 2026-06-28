@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+- Changed model on bufallo_sc instead of bufallo_l in ml_service/main.py 
+
+### Fixed
+- Fixed bugs either in backend and ml_service
+- Deleted redundant dependencies in backend
+
+
+## [1.1.0] - 2026-06-28
+[1.1.0]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v1.1.0
+
+### Added
 - GitHub Actions CI pipeline (`.github/workflows/ci.yml`) with 5 jobs:
   lint/type check, Docker build, test + coverage, quality requirement
   tests (QRT), and dependency vulnerability scan (`pip-audit`).
