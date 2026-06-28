@@ -18,11 +18,12 @@ Runs on both Raspberry Pi 5 (ARM) and x86 laptop, with servo visually emulated o
 # Total Sprint size in Story Points
 
 # Summary of delivered product changes
-
+- Fix bugs in MVP_v1  
+- Optimizing product for real deployment in Rsupbery Pi 4 via deleting redundant dependencies and changing model on bufallo_sc instead of model bufallo_l
 # Link to the runnable product
-
+[Product](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v1.1.0)
 # Link to current access or run instructions
-
+[Run instruction](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/v1.1.0/README.md#how-to-run)
 # Respond to Customer Feedback on the MVP
 | Feedback point                                          | Resulting PBI or issue                                                     | Status                      | Response                                                                                                        |
 |---------------------------------------------------------|----------------------------------------------------------------------------|-----------------------------|-----------------------------------------------------------------------------------------------------------------|
@@ -31,7 +32,6 @@ Runs on both Raspberry Pi 5 (ARM) and x86 laptop, with servo visually emulated o
 | The customer asked about сheck for liveliness           | [#55](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/55) | Not planned for this Sprint | In the future versions of the product it might be added                                                         |
 
 # Links
-
 [docs/roadmap.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/docs/roadmap.md)  
 [docs/definition-of-done.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/docs/definition-of-done.md)  
 [docs/quality-requirements.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/docs/quality-requirements.md)  
@@ -50,7 +50,6 @@ Runs on both Raspberry Pi 5 (ARM) and x86 laptop, with servo visually emulated o
 # Testing status summary, including critical modules and per-module line coverage status
 
 # Links
-
 **Unit tests:** [unit test 1](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_auth.py), [unit test 2](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_servo.py)  
 [Integration tests](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_integration.py)  
 [Automated quality requirement tests](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_database.py)  
@@ -77,7 +76,7 @@ Environment Isolation: Using isolated database instances for test runs guarantee
 Security Stability: Automated tests ensure that critical components like user authentication and password hashing remain unbroken during future code modifications or optimizations.
 Quality Requirements: Automatically verifies non-functional requirements, such as mandatory audit logging for face recognition events and the automated expiration of guest access permissions
 # SemVer release
-[]()
+[MVP v1.1.0](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v1.1.0)
 # Link to CHANGELOG.md
 [CHANGELOG.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/CHANGELOG.md)
 # Demo video
@@ -116,14 +115,14 @@ Maintain Quality Gates: Ensure that the implementation of these new features doe
 
 Biometric Anti-Spoofing: Initiate research and development for a Liveness Detection check to prevent spoofing attacks (e.g., bypassing the camera using a photo) and fully secure the face recognition module.
 # Contribution traceability table
-| Member | Contribution |
-|--------|--------|
-| @Kenzyss |  |
-| @newsow |  |
-| @b3ss0n |  |
-| @NadezhdaVoskan |  |
-| @XeOneD |  |
-| @TheShamil |  |
+| Member | Contribution                                                                                                  |
+|--------|---------------------------------------------------------------------------------------------------------------|
+| @Kenzyss | Part 5, 8 assig 4 + part 7. The Product Repository Requirements file contains the part for the 4th assignment |
+| @newsow |                                                                                                               |
+| @b3ss0n | Analysed and summarised meeting with the client, formed the contribution of LLM                               |
+| @NadezhdaVoskan |                                                                                                               |
+| @XeOneD |                                                                                                               |
+| @TheShamil | Updated the definition-of-done file according to the requirements, wrote the reflection.md file.              |
 
 # Sprint milestone
 ![Sprint milestone](images/milestone.png)  
@@ -131,5 +130,5 @@ Biometric Anti-Spoofing: Initiate research and development for a Liveness Detect
 ![Branch protection or rules evidence](images/default-branch-settings.png)  
 ![Coverage or test report](images/Coverage.png)  
 ![Additional QA check result](images/QA.png)  
-![SemVer release]()  
+![SemVer release](images/SemVer.png)  
 ![Example reviewed issue-linked PR/MR](images/PR.png)  
