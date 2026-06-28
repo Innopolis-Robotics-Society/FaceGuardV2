@@ -14,9 +14,24 @@ Runs on both Raspberry Pi 5 (ARM) and x86 laptop, with servo visually emulated o
 # Link to the Assignment 4 Sprint milestone
 [Sprint milestone](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/milestone/2)
 # Sprint Goal, Sprint dates, and short scope summary
+**Sprint Dates:** June 22, 2026 – June 28, 2026  
+**Sprint Goal:** Successfully deliver, test, and validate **MVP v1.1.0** of the FaceGuardV2 system, ensuring full deployment on target ARM hardware (Raspberry Pi 5), passing all automated QA gates with >30% test coverage, and validating core features through a formal customer demonstration.
+**Summary:**  
+Raspberry Pi 4 Optimization  
+- Model Downsizing: Swapped buffalo_l (330MB, GPU) for buffalo_sc (16MB, CPU) to ensure high performance on the Pi 4 CPU.
 
+- Dependency Cleanup: Stripped out redundant dependencies to minimize container size and RAM overhead.
+
+Key Bug Fixes & Refactoring  
+- Async & Streaming: Fixed browser video rendering by adding the missing asyncio import (ml_service) and replaced blocking time.sleep with asyncio.sleep (ml_stub).
+
+- Concurrency: Resolved a critical race condition involving global variables in ml_service.
+
+- Code Quality: Modernized the deprecated @app.on_event("startup") decorator, purged a duplicate /healthz route, and removed dead BackgroundTask code in stream.py.
+
+- API Strictness: Explicitly added the missing Query(...) validation macro to the today parameter in pages.py.
 # Total Sprint size in Story Points
-
+16
 # Summary of delivered product changes
 - Fix bugs in MVP_v1  
 - Optimizing product for real deployment in Rsupbery Pi 4 via deleting redundant dependencies and changing model on bufallo_sc instead of model bufallo_l
@@ -54,7 +69,7 @@ Runs on both Raspberry Pi 5 (ARM) and x86 laptop, with servo visually emulated o
 [Integration tests](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_integration.py)  
 [Automated quality requirement tests](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_database.py)  
 [CI pipeline](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/.github/workflows/ci.yml)  
-[Latest protected-default-branch CI run]()  
+[Latest protected-default-branch CI run](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/actions/runs/28328296363)  
 
 # Branch protection
 ![Photo](images/default-branch-settings.png)
@@ -80,9 +95,9 @@ Quality Requirements: Automatically verifies non-functional requirements, such a
 # Link to CHANGELOG.md
 [CHANGELOG.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/CHANGELOG.md)
 # Demo video
-[]()
+[Video](https://drive.google.com/drive/folders/1ZOLlZ0Ua3TId5htnEppaHtL4WZBc0CPA?usp=sharing)
 # Presentation
-[reports/week4/presentation.pdf]() 
+[reports/week4/presentation.pdf](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/tree/main/reports/week4/presentation.pdf) 
 # UAT results summary
 Based on the MVP demonstration and the feedback table above, the customer acceptance results can be summarized as follows:
 
@@ -115,18 +130,18 @@ Maintain Quality Gates: Ensure that the implementation of these new features doe
 
 Biometric Anti-Spoofing: Initiate research and development for a Liveness Detection check to prevent spoofing attacks (e.g., bypassing the camera using a photo) and fully secure the face recognition module.
 # Contribution traceability table
-| Member | Contribution                                                                                                  |
-|--------|---------------------------------------------------------------------------------------------------------------|
+| Member | Contribution                                                                                                 |
+|--------|--------------------------------------------------------------------------------------------------------------|
 | @Kenzyss | Part 5, 8 assig 4 + part 7. The Product Repository Requirements file contains the part for the 4th assignment |
-| @newsow |                                                                                                               |
-| @b3ss0n | Analysed and summarised meeting with the client, formed the contribution of LLM                               |
-| @NadezhdaVoskan |                                                                                                               |
-| @XeOneD |                                                                                                               |
-| @TheShamil | Updated the definition-of-done file according to the requirements, wrote the reflection.md file.              |
+| @newsow | Fixed all the bugs. Optimized the project for Rasbury pi 4. Made a release                                                                                                             |
+| @b3ss0n | Analysed and summarised meeting with the client, formed the contribution of LLM                              |
+| @NadezhdaVoskan | Сreated quality requirements, quality requirement test and UAT scenarios                                                                                                             |
+| @XeOneD | Part 14, Part 2, filled README file, prepare assignment report on Moodle                                                                                                             |
+| @TheShamil | Updated the definition-of-done file according to the requirements, wrote the reflection.md file              |
 
 # Sprint milestone
 ![Sprint milestone](images/milestone.png)  
-![Latest protected-default-branch CI run]()  
+![Latest protected-default-branch CI run](images/CI-run.png)  
 ![Branch protection or rules evidence](images/default-branch-settings.png)  
 ![Coverage or test report](images/Coverage.png)  
 ![Additional QA check result](images/QA.png)  
