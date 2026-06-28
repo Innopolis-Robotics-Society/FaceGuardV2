@@ -63,7 +63,7 @@ Key Bug Fixes & Refactoring
  
 4. MaintainabilityTestability: High testability is achieved by decoupling business logic from target hardware. The system uses a dedicated software abstraction (EmulatedServo) to simulate hardware feedback on non-ARM environments. This enables automated unit and integration tests to safely run in isolated CI environments while maintaining the required test coverage gate (above 30%).  Modularity & Analyzability: The codebase adheres to strict modular design principles, isolating database transactions from ML inferences. This is automatically enforced in the CI pipeline via static code analysis, utilizing tools like Ruff for linting/formatting and Mypy for static type checking to eliminate technical debt.
 # Testing status summary, including critical modules and per-module line coverage status
-The testing suite ensures the reliability of core application workflows, cryptographic operations, and hardware interface boundaries[cite: 2]. All critical system components are enforced by an automated quality gate requiring a minimum of 30% line coverage[cite: 2].
+The testing suite ensures the reliability of core application workflows, cryptographic operations, and hardware interface boundaries. All critical system components are enforced by an automated quality gate requiring a minimum of 30% line coverage.
 
 ### 1. Critical Modules and Coverage Status
 [See testing](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/docs/testing.md)
