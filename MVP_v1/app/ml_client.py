@@ -41,6 +41,9 @@ class DetectedFace:
     bbox: tuple[int, int, int, int]
     embedding: np.ndarray  # float32, (512,)
     confidence: float
+    ear: float = 0.0          
+    ear_left: float = 0.0     
+    ear_right: float = 0.0    
 
 
 @dataclass(frozen=True)
@@ -122,6 +125,13 @@ class MLClient:
                 embedding = np.asarray(f["embedding"], dtype=np.float32)
                 confidence = float(f.get("confidence", 0.0))
                 faces.append(DetectedFace(bbox, embedding, confidence))
+                ear_left = float(f.get("ear_left", 0.0))
+                ear_right = float(f.get("ear_right", 0.0))
+                ear = float(f.get("ear", (ear_left + ear_right) / 2.0))
+                faces.append(DetectedFace(
+                    bbox, embedding, confidence,
+                    ear=ear, ear_left=ear_left, ear_right=ear_right,
+                ))
             except (KeyError, TypeError, ValueError) as e:
                 log.warning("Skipping malformed face entry: %s", e)
                 continue

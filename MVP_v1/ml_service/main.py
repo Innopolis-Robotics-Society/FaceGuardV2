@@ -21,6 +21,7 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from insightface.app import FaceAnalysis
 from PIL import Image, ImageDraw
+import onnxruntime as ort
 
 # --- Globals ---
 face_app = None
@@ -36,10 +37,36 @@ def _now_iso() -> str:
 def init_model():
     """Load InsightFace model once at startup."""
     global face_app
-    face_app = FaceAnalysis(name="buffalo_sc", root="./models")
+    face_app = FaceAnalysis(name="buffalo_l", root="./models")
     face_app.prepare(ctx_id=-1, det_size=(640, 640))
     print("InsightFace model loaded")
 
+RIGHT_EYE_IDX = [89, 95, 94, 93, 91, 87]
+LEFT_EYE_IDX  = [35, 41, 40, 39, 37, 33]
+
+def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
+    """Eye Aspect Ratio for 6 eye landmarks.
+
+    Expected landmark points (clockwise from the left corner):
+        0 -- left corner (inner)
+        1, 2 -- upper eyelid
+        3 -- right corner (outer)
+        4, 5 -- lower eyelid
+
+    EAR = (|p1-p5| + |p2-p4|) / (2 * |p0-p3|)
+    """
+    if landmarks is None or len(landmarks) < max(eye_idx) + 1:
+        return 0.0
+
+    pts = landmarks[eye_idx]
+    # vertical distance
+    v1 = np.linalg.norm(pts[1] - pts[5])
+    v2 = np.linalg.norm(pts[2] - pts[4])
+    # horizontal distance
+    h = np.linalg.norm(pts[0] - pts[3])
+    if h < 1e-6:
+        return 0.0
+    return float((v1 + v2) / (2.0 * h))
 
 def process_frame(frame: np.ndarray) -> tuple[bytes, dict]:
     """Detect faces, draw boxes, return JPEG + metadata."""
@@ -58,14 +85,23 @@ def process_frame(frame: np.ndarray) -> tuple[bytes, dict]:
         draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], outline=(0, 255, 0), width=2)
         draw.text((bbox[0], bbox[1] - 10), f"{face.det_score:.2f}", fill=(0, 255, 0))
 
-        # Collect metadata
-        face_data.append(
-            {
-                "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
-                "embedding": face.embedding.tolist(),  # 512-dim, already L2-normalized
-                "confidence": float(face.det_score),
-            }
-        )
+        # --- LIVENESS: EAR ---
+        ear_left = 0.0
+        ear_right = 0.0
+        if hasattr(face, 'landmark_2d_106') and face.landmark_2d_106 is not None:
+            lm = face.landmark_2d_106
+            ear_left = _calculate_ear(lm, LEFT_EYE_IDX)
+            ear_right = _calculate_ear(lm, RIGHT_EYE_IDX)
+
+        #collect the metadata
+        face_data.append({
+            "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
+            "embedding": face.embedding.tolist(),
+            "confidence": float(face.det_score),
+            "ear_left": round(ear_left, 4),
+            "ear_right": round(ear_right, 4),
+            "ear": round((ear_left + ear_right) / 2.0, 4),
+        })
 
     # Encode to JPEG
     buf = io.BytesIO()

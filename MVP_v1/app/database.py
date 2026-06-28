@@ -56,6 +56,7 @@ class LogEntry:
     access_type: AccessType
     success: bool
     timestamp: datetime
+    liveness_passed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -299,11 +300,12 @@ class FaceDatabase:
         score: float | None,
         access_type: AccessType,
         success: bool,
+        liveness_passed: bool | None = None,
     ) -> None:
         with self._lock:
             self._conn.execute(
-                "INSERT INTO logs (name, score, access_type, success) VALUES (?, ?, ?, ?)",
-                (name, score, access_type, bool(success)),
+                "INSERT INTO logs (name, score, access_type, success, liveness_passed) VALUES (?, ?, ?, ?, ?)",
+                (name, score, access_type, bool(success), liveness_passed),
             )
             self._conn.commit()
 
@@ -518,13 +520,20 @@ def _row_to_guest(row: sqlite3.Row) -> Guest:
 
 
 def _row_to_log(row: sqlite3.Row) -> LogEntry:
+    try:
+        liveness = row["liveness_passed"]
+        if liveness is not None:
+            liveness = bool(liveness)
+    except (IndexError, KeyError):
+        liveness = None
     return LogEntry(
         id=int(row["id"]),
         name=row["name"],
         score=None if row["score"] is None else float(row["score"]),
-        access_type=row["access_type"],  # type: ignore[arg-type]
+        access_type=row["access_type"],
         success=bool(row["success"]),
         timestamp=_from_iso(row["timestamp"]),
+        liveness_passed=liveness,
     )
 
 

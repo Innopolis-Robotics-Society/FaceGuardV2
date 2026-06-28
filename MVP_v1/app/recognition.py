@@ -17,9 +17,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from dataclasses import dataclass, field
 
 import numpy as np
 
+from .config import get_settings
 from .database import FaceDatabase
 from .ml_client import MLClient
 from .servo import Servo
@@ -27,6 +29,14 @@ from .state import CurrentVerdict, SystemState
 
 log = logging.getLogger(__name__)
 
+@dataclass
+class LivenessState:
+    """Current liveness check state."""
+    is_active: bool = False
+    started_at: float = 0.0
+    ear_history: list = field(default_factory=list)  # list of tuples (timestamp, ear)
+    last_ear_high: float = 0.0
+    blink_detected: bool = False
 
 class RecognitionLoop:
     def __init__(
@@ -48,6 +58,10 @@ class RecognitionLoop:
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self._last_health_check: float = 0.0
+        
+        # LIVENESS
+        self._settings = get_settings() 
+        self._liveness: LivenessState | None = None
 
     async def start(self) -> None:
         if self._task is None or self._task.done():
@@ -70,6 +84,7 @@ class RecognitionLoop:
             except Exception:  # pragma: no cover — defensive
                 log.exception("Recognition tick crashed")
                 self._state.update(CurrentVerdict(verdict="error", name="Recognition loop crashed"))
+            
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._interval)
             except TimeoutError:
@@ -93,14 +108,11 @@ class RecognitionLoop:
             return
 
         if not latest.faces:
+            self._liveness = None
             self._state.update(CurrentVerdict(verdict="idle"))
             return
 
-        # Pick the biggest face (same rule as MVP v0).
-        face = max(
-            latest.faces,
-            key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]),
-        )
+        face = max(latest.faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
 
         # Offload the (possibly blocking, GIL-released by numpy) DB call
         # to a thread so the asyncio loop stays responsive.
@@ -111,41 +123,118 @@ class RecognitionLoop:
         )
 
         if result.access_type == "unknown":
-            self._state.update(
-                CurrentVerdict(
-                    verdict="denied",
-                    name=result.name,
-                    score=result.score,
-                    access_type="unknown",
-                    timestamp=time.time(),
-                )
-            )
-            log.info(
-                "Denied: best_score=%.3f threshold=%.3f",
-                result.score,
-                self._threshold,
-            )
+            self._liveness = None
+            self._state.update(CurrentVerdict(
+                verdict="denied",
+                name=result.name,
+                score=result.score,
+                access_type="unknown",
+                liveness_status="disabled" if not self._settings.liveness_enabled else "failed",
+            ))
+            return
+        
+        if not self._settings.liveness_enabled:
+            self._liveness = None
+            await self._grant_access(result, face, liveness_passed=None)
             return
 
-        # Granted.
-        self._state.update(
-            CurrentVerdict(
-                verdict="granted",
+        if self._liveness is None or not self._liveness.is_active:
+            self._liveness = LivenessState(
+                is_active=True,
+                started_at=time.time(),
+                last_ear_high=getattr(face, 'ear', 0.0),
+            )
+            self._state.update(CurrentVerdict(
+                verdict="liveness_check",
                 name=result.name,
                 score=result.score,
                 access_type=result.access_type,
-                matched_user_id=result.matched_user_id,
-                timestamp=time.time(),
+                matched_user_id=getattr(result, 'matched_user_id', None),
+                liveness_status="checking",
+                liveness_ear=getattr(face, 'ear', 0.0),
+            ))
+            log.info("Liveness check started for %s (ear=%.3f)", result.name, getattr(face, 'ear', 0.0))
+            return
+
+        
+        liv = self._liveness
+        current_ear = getattr(face, 'ear', 0.5) 
+        liv.ear_history.append((time.time(), current_ear))
+
+        cutoff = time.time() - self._settings.liveness_timeout_sec
+        liv.ear_history = [(t, e) for t, e in liv.ear_history if t >= cutoff]
+
+        threshold = self._settings.liveness_ear_threshold
+        if not liv.blink_detected:
+            for i in range(1, len(liv.ear_history)):
+                t_prev, e_prev = liv.ear_history[i-1]
+                t_cur, e_cur = liv.ear_history[i]
+                if e_prev >= threshold and e_cur < threshold:
+                    liv.last_ear_high = e_prev
+                    log.info("Blink dip detected: %.3f → %.3f", e_prev, e_cur)
+                elif e_prev < threshold and e_cur >= threshold:
+                    liv.blink_detected = True
+                    log.info("Blink confirmed: %.3f → %.3f", e_prev, e_cur)
+                    break
+        
+        if liv.blink_detected:
+            await self._grant_access(result, face, liveness_passed=True)
+            self._liveness = None
+            return
+
+        elapsed = time.time() - liv.started_at
+        if elapsed > self._settings.liveness_timeout_sec:
+            log.warning(
+                "Liveness FAILED for %s (ear stable for %.1fs, no blink detected)",
+                result.name, elapsed,
             )
-        )
+            self._state.update(CurrentVerdict(
+                verdict="denied",
+                name=result.name,
+                score=result.score,
+                access_type=result.access_type,
+                matched_user_id=getattr(result, 'matched_user_id', None),
+                liveness_status="failed",
+                liveness_ear=current_ear,
+            ))
+
+            await asyncio.to_thread(
+                self._db.add_log,
+                f"Liveness failed: {result.name}",
+                result.score,
+                result.access_type,
+                False,  # success=False
+            )
+            self._liveness = None
+            return
+        
+        self._state.update(CurrentVerdict(
+            verdict="liveness_check",
+            name=result.name,
+            score=result.score,
+            access_type=result.access_type,
+            matched_user_id=getattr(result, 'matched_user_id', None),
+            liveness_status="checking",
+            liveness_ear=current_ear,
+        ))
+
+    async def _grant_access(self, result, face, liveness_passed: bool | None):
+        """Open the door and log the success"""
+        self._state.update(CurrentVerdict(
+            verdict="granted",
+            name=result.name,
+            score=result.score,
+            access_type=result.access_type,
+            matched_user_id=getattr(result, 'matched_user_id', None),
+            liveness_status="passed" if liveness_passed else (
+                "disabled" if liveness_passed is None else "failed"
+            ),
+            liveness_ear=getattr(face, 'ear', 0.0),
+        ))
         log.info(
-            "Granted: name=%s type=%s score=%.3f",
-            result.name,
-            result.access_type,
-            result.score,
+            "Granted: name=%s type=%s score=%.3f liveness=%s",
+            result.name, result.access_type, result.score, liveness_passed,
         )
-        # Trigger the servo in a thread — even GpioServo's open() returns
-        # quickly, but we don't want any chance of blocking the loop.
         await asyncio.to_thread(self._servo.open)
 
 
@@ -161,18 +250,10 @@ def register_one(
 ) -> tuple[str, list[float]]:
     """Capture N frames from the ML service, average their embeddings,
     save the result as a user or guest.
-
-    Returns `(status_message, embedding_preview)` where embedding_preview
-    is the first 8 components of the averaged embedding — useful for
-    confirming in the UI that we actually captured something.
-
-    Blocks for frame_count * frame_interval_ms. Caller should run it
-    inside `asyncio.to_thread(...)` from an async context.
     """
     embeddings: list[np.ndarray] = []
     interval = frame_interval_ms / 1000.0
 
-    # Synchronous loop — runs in a worker thread, see MLClient.start().
     import httpx
 
     with httpx.Client(base_url=ml._base_url, timeout=ml._timeout) as client:
@@ -196,7 +277,6 @@ def register_one(
             if i < frame_count - 1:
                 time.sleep(interval)
 
-    # Average + L2-normalize, exactly like MVP v0's create_average_embedding.
     avg = np.mean(embeddings, axis=0)
     norm = float(np.linalg.norm(avg))
     if norm > 0:
