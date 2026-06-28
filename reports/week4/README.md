@@ -63,7 +63,23 @@ Key Bug Fixes & Refactoring
  
 4. MaintainabilityTestability: High testability is achieved by decoupling business logic from target hardware. The system uses a dedicated software abstraction (EmulatedServo) to simulate hardware feedback on non-ARM environments. This enables automated unit and integration tests to safely run in isolated CI environments while maintaining the required test coverage gate (above 30%).  Modularity & Analyzability: The codebase adheres to strict modular design principles, isolating database transactions from ML inferences. This is automatically enforced in the CI pipeline via static code analysis, utilizing tools like Ruff for linting/formatting and Mypy for static type checking to eliminate technical debt.
 # Testing status summary, including critical modules and per-module line coverage status
+The testing suite ensures the reliability of core application workflows, cryptographic operations, and hardware interface boundaries[cite: 2]. All critical system components are enforced by an automated quality gate requiring a minimum of 30% line coverage[cite: 2].
 
+### 1. Critical Modules and Coverage Status
+[See testing](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/docs/testing.md)
+
+### 2. Automated Test Suite Execution
+The test matrix isolates units, APIs, and non-functional quality requirements down to separate execution targets:
+
+* **Unit Tests:** Run via `pytest -m "not integration and not qrt"` to validate authentication logic, configurations, and isolated servo routines in a clean state. **Status: Passing**.
+* **Integration Tests:** Run via `pytest -m integration` utilizing FastAPI's `TestClient` alongside test database transactions to check end-to-end API route logic. **Status: Passing**.
+* **Automated Quality Requirement Tests (QRTs):** Run via `pytest -m qrt` to continuously enforce non-functional boundaries from QR-001 to QR-005. **Status: Passing**.
+
+### 3. Pipeline Automated Quality Gates
+Every code increment targeting the default protected branch must satisfy the following checks before it can be integrated into a stable release:
+* **Linting & Formatting:** Managed via `ruff` and `ruff format --check` to eliminate stylistic syntax issues and guarantee uniform code styling.
+* **Static Typing:** Enforced using `mypy` to find structural type errors prior to compilation/execution.
+* **Supply Chain Security:** Scanned via `pip-audit` to inspect target package configurations (`pyproject.toml`) against open PyPI vulnerability registers. Upstream warning items (e.g., `jinja2`, `pillow`) are tracked for future dependency bumps.
 # Links
 **Unit tests:** [unit test 1](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_auth.py), [unit test 2](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_servo.py)  
 [Integration tests](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/MVP_v1/tests/test_integration.py)  
