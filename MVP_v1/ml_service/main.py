@@ -28,6 +28,13 @@ face_app = None
 _frame_lock = threading.Lock()
 latest_frame = None
 latest_result = {"timestamp": "", "faces": []}
+# --- Liveness State ---
+EAR_THRESHOLD = 0.20
+CONSECUTIVE_FRAMES = 2
+LIVENESS_TTL_SECONDS = 3.0  # Время жизни статуса "живой" после моргания
+
+blink_counter = 0
+liveness_valid_until = 0.0  # Unix timestamp окончания действия liveness
 
 
 def _now_iso() -> str:
@@ -69,48 +76,77 @@ def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
     return float((v1 + v2) / (2.0 * h))
 
 def process_frame(frame: np.ndarray) -> tuple[bytes, dict]:
-    """Detect faces, draw boxes, return JPEG + metadata."""
-    global face_app
+    global face_app, blink_counter, liveness_valid_until
 
-    # InsightFace detection
     faces = face_app.get(frame)
-    # Draw on frame
     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img)
 
-    face_data = []
-    for face in faces:
-        bbox = face.bbox.astype(int)
-        # Draw rectangle
-        draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], outline=(0, 255, 0), width=2)
-        draw.text((bbox[0], bbox[1] - 10), f"{face.det_score:.2f}", fill=(0, 255, 0))
+    # 1. Жесткий сброс состояния, если в кадре нет лиц
+    if not faces:
+        blink_counter = 0
+        liveness_valid_until = 0.0
+        
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        return buf.getvalue(), {"timestamp": _now_iso(), "faces": []}
 
-        # --- LIVENESS: EAR ---
-        ear_left = 0.0
-        ear_right = 0.0
+    face_data = []
+    
+    # Сортировка по площади (самое крупное лицо — индекс 0)
+    faces = sorted(faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]), reverse=True)
+
+    for i, face in enumerate(faces):
+        bbox = face.bbox.astype(int)
+        
+        ear_left, ear_right, ear_avg = 0.0, 0.0, 0.0
+        
         if hasattr(face, 'landmark_2d_106') and face.landmark_2d_106 is not None:
             lm = face.landmark_2d_106
             ear_left = _calculate_ear(lm, LEFT_EYE_IDX)
             ear_right = _calculate_ear(lm, RIGHT_EYE_IDX)
+            ear_avg = (ear_left + ear_right) / 2.0
 
-        #collect the metadata
+        current_time = time.time()
+        is_live = False
+
+        # LIVENESS применяем только к главному лицу перед камерой
+        if i == 0:
+            if ear_avg < EAR_THRESHOLD:
+                # Глаза закрыты
+                blink_counter += 1
+            else:
+                # Глаза открыты. Фиксируем моргание, если до этого они были закрыты достаточно долго
+                if blink_counter >= CONSECUTIVE_FRAMES:
+                    liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
+                blink_counter = 0
+            
+            # Проверка актуальности статуса
+            is_live = current_time < liveness_valid_until
+                
+            color = (0, 255, 0) if is_live else (255, 0, 0)
+            draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], outline=color, width=2)
+            
+            status_text = f"LIVE" if is_live else f"BLINK TO UNLOCK"
+            draw.text((bbox[0], bbox[1] - 25), status_text, fill=color)
+        else:
+            draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], outline=(128, 128, 128), width=1)
+
+        draw.text((bbox[0], bbox[1] - 10), f"Conf: {face.det_score:.2f} | EAR: {ear_avg:.2f}", fill=(0, 255, 0))
+
         face_data.append({
             "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
             "embedding": face.embedding.tolist(),
             "confidence": float(face.det_score),
-            "ear_left": round(ear_left, 4),
-            "ear_right": round(ear_right, 4),
-            "ear": round((ear_left + ear_right) / 2.0, 4),
+            "ear": round(ear_avg, 4),
+            "is_primary": i == 0,
+            "liveness_passed": is_live
         })
 
-    # Encode to JPEG
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
-    jpeg_bytes = buf.getvalue()
-
-    result = {"timestamp": _now_iso(), "faces": face_data}
-
-    return jpeg_bytes, result
+    
+    return buf.getvalue(), {"timestamp": _now_iso(), "faces": face_data}
 
 
 def capture_loop():
