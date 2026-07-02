@@ -25,7 +25,6 @@ import cv2
 import numpy as np
 import mediapipe as mp
 
-from mediapipe.solutions import face_mesh as mp_face_mesh_solution
 
 # --- Globals ---
 face_app = None
@@ -59,7 +58,8 @@ def init_model():
     face_app = FaceAnalysis(name="buffalo_sc", root="./models")
     face_app.prepare(ctx_id=-1, det_size=(640, 640))
     
-    mp_face_mesh = mp_face_mesh_solution.FaceMesh(
+    mp_face_mesh_module = mp.solutions.face_mesh
+    mp_face_mesh = mp_face_mesh_module.FaceMesh(
         max_num_faces=1,
         refine_landmarks=False,
         min_detection_confidence=0.5,
