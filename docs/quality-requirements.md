@@ -24,6 +24,8 @@ FaceGuardV2 quality requirements for Assignment 4.
 
 **Linked quality requirement tests:** [QRT-001](quality-requirement-tests.md#qrt-001-registered-user-recognition), [QRT-002](quality-requirement-tests.md#qrt-002-unknown-user-below-threshold), [QRT-003](quality-requirement-tests.md#qrt-003-best-match-selection)
 
+**Related ADRs:** [ADR-001 Separate backend and ML service](architecture/adr/ADR-001-separate-backend-and-ml-service.md)
+
 ---
 
 ## QR-002: Expired guest access denial
@@ -35,6 +37,8 @@ FaceGuardV2 quality requirements for Assignment 4.
 **Why this matters:** Expired guest permissions must not allow unauthorized access.
 
 **Linked quality requirement tests:** [QRT-004](quality-requirement-tests.md#qrt-004-expired-guest-denial)
+
+**Related ADRs:** [ADR-002 Use SQLite through FaceDatabase DAL](architecture/adr/ADR-002-use-sqlite-through-face-database.md)
 
 ---
 
@@ -48,6 +52,8 @@ FaceGuardV2 quality requirements for Assignment 4.
 
 **Linked quality requirement tests:** [QRT-005](quality-requirement-tests.md#qrt-005-password-hash-verification)
 
+**Related ADRs:** [ADR-003 Use session authentication and password hashing](architecture/adr/ADR-003-session-auth-and-password-hashing.md)
+
 ---
 
 ## QR-004: Servo emulator operability
@@ -60,6 +66,8 @@ FaceGuardV2 quality requirements for Assignment 4.
 
 **Linked quality requirement tests:** [QRT-006](quality-requirement-tests.md#qrt-006-emulated-servo-open-close)
 
+**Related ADRs:** [ADR-004 Use servo abstraction with emulated mode](architecture/adr/ADR-004-servo-abstraction-with-emulated-mode.md)
+
 ---
 
 ## QR-005: Recognition audit logging
@@ -71,6 +79,8 @@ FaceGuardV2 quality requirements for Assignment 4.
 **Why this matters:** Access attempts must be traceable for review and security analysis.
 
 **Linked quality requirement tests:** [QRT-007](quality-requirement-tests.md#qrt-007-recognition-audit-log)
+
+**Related ADRs:** [ADR-002 Use SQLite through FaceDatabase DAL](architecture/adr/ADR-002-use-sqlite-through-face-database.md)
 
 ---
 
