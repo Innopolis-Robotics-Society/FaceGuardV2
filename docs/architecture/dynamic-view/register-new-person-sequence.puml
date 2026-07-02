@@ -1,0 +1,53 @@
+@startuml
+title FaceGuardV2 - Dynamic View / Register New Person
+
+actor Admin
+participant "Web Admin UI\nBrowser" as UI
+participant "FastAPI Route\nPOST /register" as Route
+participant "Auth Module" as Auth
+participant "Recognition Orchestrator\nregister_one()" as Rec
+participant "ML Client" as MLClient
+participant "ML Service\nGET /ml/latest" as ML
+participant "FaceDatabase" as DAL
+database "SQLite DB" as DB
+
+Admin -> UI: Fill name and access type
+Admin -> UI: Click "Capture & register"
+
+UI -> Route: POST /register\nsession cookie + form data
+Route -> Auth: validate session
+Auth --> Route: admin authorized
+
+alt unauthorized
+    Route --> UI: redirect to /login or show error
+else authorized
+    Route -> Rec: register_one(name, access_type)
+
+    loop 5 frames
+        Rec -> MLClient: get_latest_faces()
+        MLClient -> ML: GET /ml/latest
+        ML --> MLClient: faces with bbox + embedding
+        MLClient --> Rec: parsed face data
+
+        alt face detected
+            Rec -> Rec: select biggest face\nsave embedding
+        else no face detected
+            Rec -> Rec: mark failed frame
+        end
+    end
+
+    alt enough valid embeddings
+        Rec -> Rec: average embeddings\nL2-normalize vector
+        Rec -> DAL: save user/guest\nname + embedding + expiry
+        DAL -> DB: INSERT into users/guests
+        DB --> DAL: saved id
+        DAL --> Rec: success
+        Rec --> Route: registration successful
+        Route --> UI: HTMX success partial
+    else not enough embeddings
+        Rec --> Route: registration error
+        Route --> UI: error partial
+    end
+end
+
+@enduml

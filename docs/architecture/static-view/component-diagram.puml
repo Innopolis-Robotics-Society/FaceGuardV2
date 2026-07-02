@@ -1,0 +1,61 @@
+@startuml
+skinparam componentStyle uml2
+left to right direction
+
+title FaceGuardV2 - Static View / Component Diagram
+
+actor "Admin" as Admin
+
+component "Web Admin UI\nBrowser / HTML / HTMX / JS" as UI
+component "FastAPI Backend" as Backend
+component "Auth Module" as Auth
+component "Recognition Orchestrator" as Rec
+component "ML Client" as MLClient
+component "Status Publisher\nSSE + in-memory state" as State
+component "Servo Controller\nGPIO / Emulated" as ServoCtrl
+component "FaceDatabase\nData Access Layer" as DAL
+database "SQLite DB\nusers / guests / logs / admins" as DB
+
+component "ML Service\nCamera + InsightFace" as ML
+component "Raspberry Pi Camera" as Camera
+component "Servo + LED" as Servo
+
+interface "Web API\npages / HTMX / JSON" as IWeb
+interface "Auth API" as IAuth
+interface "Recognition API" as IRec
+interface "ML API\n/ml/latest / ml/stream" as IML
+interface "Persistence API" as IPersistence
+interface "Status Events\n/status/events" as IStatus
+interface "Door Control API" as IDoor
+
+Admin --> UI : uses
+
+UI ..> IWeb : HTTP
+IWeb -- Backend
+
+Backend ..> IAuth : uses
+IAuth -- Auth
+
+Backend ..> IRec : uses
+IRec -- Rec
+
+Rec ..> IML : gets face data
+MLClient ..> IML : HTTP client
+IML -- ML
+
+ML --> Camera : captures frames
+
+Rec ..> IPersistence : reads/writes users,\nguests and logs
+Auth ..> IPersistence : reads/writes admins
+IPersistence -- DAL
+DAL --> DB : SQL CRUD
+
+Rec --> State : publishes verdict
+UI ..> IStatus : subscribes via SSE
+IStatus -- State
+
+Rec ..> IDoor : unlock / close command
+IDoor -- ServoCtrl
+ServoCtrl --> Servo : GPIO or emulated signal
+
+@enduml
