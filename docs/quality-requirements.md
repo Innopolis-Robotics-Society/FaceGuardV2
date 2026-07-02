@@ -6,11 +6,11 @@ FaceGuardV2 quality requirements for Assignment 4.
 
 | QR ID | Title | ISO/IEC 25010 sub-characteristic | Linked QRT | Related ADRs |
 |---|---|---|---|---|
-| QR-001 | Correct face recognition decision | Functional correctness | QRT-001, QRT-002, QRT-003 | [ADR-001](architecture/adr/ADR-001-separate-backend-and-ml-service.md) |
-| QR-002 | Expired guest access denial | Integrity | QRT-004 | [ADR-002](architecture/adr/ADR-002-use-sqlite-through-face-database.md) |
-| QR-003 | Secure password verification | Confidentiality | QRT-005 | [ADR-003](architecture/adr/ADR-003-session-auth-and-password-hashing.md) |
-| QR-004 | Servo emulator operability | Operability | QRT-006 | [ADR-004](architecture/adr/ADR-004-servo-abstraction-with-emulated-mode.md) |
-| QR-005 | Recognition audit logging | Accountability | QRT-007 | [ADR-002](architecture/adr/ADR-002-use-sqlite-through-face-database.md) |
+| QR-001 | Correct face recognition decision | Functional correctness | [QRT-001](quality-requirement-tests.md#qrt-001-registered-user-recognition), [QRT-002](quality-requirement-tests.md#qrt-002-unknown-user-below-threshold), [QRT-003](quality-requirement-tests.md#qrt-003-best-match-selection) | [ADR-001](architecture/adr/ADR-001-separate-backend-and-ml-service.md) |
+| QR-002 | Expired guest access denial | Integrity | [QRT-004](quality-requirement-tests.md#qrt-004-expired-guest-denial) | [ADR-002](architecture/adr/ADR-002-use-sqlite-through-face-database.md) |
+| QR-003 | Secure password verification | Confidentiality | [QRT-005](quality-requirement-tests.md#qrt-005-password-hash-verification) | [ADR-003](architecture/adr/ADR-003-session-auth-and-password-hashing.md) |
+| QR-004 | Servo emulator operability | Operability | [QRT-006](quality-requirement-tests.md#qrt-006-emulated-servo-open-close) | [ADR-004](architecture/adr/ADR-004-servo-abstraction-with-emulated-mode.md) |
+| QR-005 | Recognition audit logging | Accountability | [QRT-007](quality-requirement-tests.md#qrt-007-recognition-audit-log) | [ADR-002](architecture/adr/ADR-002-use-sqlite-through-face-database.md) |
 
 ---
 
