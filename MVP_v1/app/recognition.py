@@ -108,134 +108,68 @@ class RecognitionLoop:
             return
 
         if not latest.faces:
-            self._liveness = None
             self._state.update(CurrentVerdict(verdict="idle"))
             return
 
-        face = max(latest.faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
+        primary = next((f for f in latest.faces if f.is_primary), None)
+        if primary is None:
+            primary = max(latest.faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
 
-        # Offload the (possibly blocking, GIL-released by numpy) DB call
-        # to a thread so the asyncio loop stays responsive.
         result = await asyncio.to_thread(
             self._db.recognize,
-            np.asarray(face.embedding, dtype=np.float32),
+            np.asarray(primary.embedding, dtype=np.float32),
             self._threshold,
         )
 
         if result.access_type == "unknown":
-            self._liveness = None
             self._state.update(CurrentVerdict(
                 verdict="denied",
                 name=result.name,
                 score=result.score,
                 access_type="unknown",
-                liveness_status="disabled" if not self._settings.liveness_enabled else "failed",
+                liveness_status="disabled",
+                liveness_ear=primary.ear,
             ))
             return
+
         
         if not self._settings.liveness_enabled:
-            self._liveness = None
-            await self._grant_access(result, face, liveness_passed=None)
+            await self._grant_access(result, primary, liveness_passed=None)
             return
 
-        if self._liveness is None or not self._liveness.is_active:
-            self._liveness = LivenessState(
-                is_active=True,
-                started_at=time.time(),
-                last_ear_high=getattr(face, 'ear', 0.0),
-            )
+        if primary.liveness_passed:
+            await self._grant_access(result, primary, liveness_passed=True)
+        else:
             self._state.update(CurrentVerdict(
                 verdict="liveness_check",
                 name=result.name,
                 score=result.score,
                 access_type=result.access_type,
-                matched_user_id=getattr(result, 'matched_user_id', None),
+                matched_user_id=result.matched_user_id,
                 liveness_status="checking",
-                liveness_ear=getattr(face, 'ear', 0.0),
+                liveness_ear=primary.ear,
             ))
-            log.info("Liveness check started for %s (ear=%.3f)", result.name, getattr(face, 'ear', 0.0))
-            return
-
-        
-        liv = self._liveness
-        current_ear = getattr(face, 'ear', 0.5) 
-        liv.ear_history.append((time.time(), current_ear))
-
-        cutoff = time.time() - self._settings.liveness_timeout_sec
-        liv.ear_history = [(t, e) for t, e in liv.ear_history if t >= cutoff]
-
-        threshold = self._settings.liveness_ear_threshold
-        if not liv.blink_detected:
-            for i in range(1, len(liv.ear_history)):
-                t_prev, e_prev = liv.ear_history[i-1]
-                t_cur, e_cur = liv.ear_history[i]
-                if e_prev >= threshold and e_cur < threshold:
-                    liv.last_ear_high = e_prev
-                    log.info("Blink dip detected: %.3f → %.3f", e_prev, e_cur)
-                elif e_prev < threshold and e_cur >= threshold:
-                    liv.blink_detected = True
-                    log.info("Blink confirmed: %.3f → %.3f", e_prev, e_cur)
-                    break
-        
-        if liv.blink_detected:
-            await self._grant_access(result, face, liveness_passed=True)
-            self._liveness = None
-            return
-
-        elapsed = time.time() - liv.started_at
-        if elapsed > self._settings.liveness_timeout_sec:
-            log.warning(
-                "Liveness FAILED for %s (ear stable for %.1fs, no blink detected)",
-                result.name, elapsed,
-            )
-            self._state.update(CurrentVerdict(
-                verdict="denied",
-                name=result.name,
-                score=result.score,
-                access_type=result.access_type,
-                matched_user_id=getattr(result, 'matched_user_id', None),
-                liveness_status="failed",
-                liveness_ear=current_ear,
-            ))
-
-            await asyncio.to_thread(
-                self._db.add_log,
-                f"Liveness failed: {result.name}",
-                result.score,
-                result.access_type,
-                False,  # success=False
-            )
-            self._liveness = None
-            return
-        
-        self._state.update(CurrentVerdict(
-            verdict="liveness_check",
-            name=result.name,
-            score=result.score,
-            access_type=result.access_type,
-            matched_user_id=getattr(result, 'matched_user_id', None),
-            liveness_status="checking",
-            liveness_ear=current_ear,
-        ))
 
     async def _grant_access(self, result, face, liveness_passed: bool | None):
-        """Open the door and log the success"""
         self._state.update(CurrentVerdict(
             verdict="granted",
             name=result.name,
             score=result.score,
             access_type=result.access_type,
-            matched_user_id=getattr(result, 'matched_user_id', None),
+            matched_user_id=result.matched_user_id,
             liveness_status="passed" if liveness_passed else (
                 "disabled" if liveness_passed is None else "failed"
             ),
-            liveness_ear=getattr(face, 'ear', 0.0),
+            liveness_ear=face.ear,
         ))
-        log.info(
-            "Granted: name=%s type=%s score=%.3f liveness=%s",
-            result.name, result.access_type, result.score, liveness_passed,
-        )
+        log.info("Granted: name=%s score=%.3f liveness=%s",
+            result.name, result.score, liveness_passed)
         await asyncio.to_thread(self._servo.open)
+        await asyncio.to_thread(
+            self._db.add_log,
+            result.name, result.score, result.access_type, True,
+            liveness_passed,
+        )
 
 
 def register_one(
