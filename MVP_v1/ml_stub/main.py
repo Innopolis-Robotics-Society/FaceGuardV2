@@ -16,6 +16,8 @@ return synthetic data:
     enough that averaging during registration produces a stable
     identity).
 
+Issue #79 — logging: WARNING level + /health filtered out.
+
 Run:
     uvicorn ml_stub.main:app --port 8001 --reload
 """
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import logging
 import math
 import time
 from datetime import UTC, datetime
@@ -100,6 +103,21 @@ def _frame_payload(t: float) -> dict:
     }
 
 
+# Issue #79 — filter /health out of uvicorn access logs.
+class _HealthFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            msg = record.getMessage()
+        except Exception:  # pragma: no cover
+            return True
+        if "/health" in msg and " 200 " in msg:
+            return False
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "ml-stub"}
@@ -137,4 +155,10 @@ async def ml_stream():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("ml_stub.main:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run(
+        "ml_stub.main:app",
+        host="0.0.0.0",
+        port=8001,
+        reload=True,
+        log_level="warning",
+    )

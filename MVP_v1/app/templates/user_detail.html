@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}{{ user.name }} — FaceGuard{% endblock %}
+
+{% block content %}
+<header>
+  <h2>{{ user.name }}</h2>
+  <p class="muted">
+    ID #{{ user.id }} ·
+    <a href="/users">&larr; back to user list</a>
+  </p>
+</header>
+
+<div class="grid">
+  {# ---------- Info + edit form (left) ---------- #}
+  <section>
+    <h3>Details</h3>
+    <table>
+      <tbody>
+        <tr><td>Name</td><td>{{ user.name }}</td></tr>
+        <tr>
+          <td>Type</td>
+          <td>
+            {% if user.type == 'temporary' %}
+              <span class="badge temp">temporary</span>
+            {% else %}
+              <span class="badge perm">permanent</span>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td>Expires</td>
+          <td>
+            {% if user.expires_at %}
+              {{ user.expires_at.strftime('%Y-%m-%d %H:%M %Z') }}
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td>Created</td>
+          <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M %Z') }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Edit</h3>
+    <form method="post" action="/users/{{ user.id }}/update">
+      <label>
+        Full name
+        <input type="text" name="name" value="{{ user.name }}" required>
+      </label>
+
+      <fieldset>
+        <legend>Access type</legend>
+        <label>
+          <input type="radio" name="type" value="permanent"
+                 {% if user.type == 'permanent' %}checked{% endif %}
+                 id="radio-permanent">
+          Permanent
+        </label>
+        <label>
+          <input type="radio" name="type" value="temporary"
+                 {% if user.type == 'temporary' %}checked{% endif %}
+                 id="radio-temporary">
+          Temporary
+        </label>
+      </fieldset>
+
+      <label id="expires-field"
+             {% if user.type != 'temporary' %}style="display:none"{% endif %}>
+        Expiration date
+        <input type="datetime-local" name="expires_at"
+               {% if user.expires_at %}
+               value="{{ user.expires_at.strftime('%Y-%m-%dT%H:%M') }}"
+               {% endif %}>
+        <small class="muted">Required for temporary access. Time zone: local.</small>
+      </label>
+
+      <button type="submit">Save changes</button>
+      <a href="/users" class="button outline secondary">Cancel</a>
+    </form>
+
+    <h3>Danger zone</h3>
+    <form method="post" action="/users/{{ user.id }}/delete"
+          onsubmit="return confirm('Delete user {{ user.name|e }}? This cannot be undone.');"
+          style="margin:0">
+      <button class="outline contrast" type="submit">Delete user</button>
+    </form>
+  </section>
+
+  {# ---------- Logs (right, optional) ---------- #}
+  <aside>
+    <h3>Recent activity</h3>
+    {% if logs %}
+    <table class="compact">
+      <thead>
+        <tr><th>Time</th><th>Result</th><th>Score</th></tr>
+      </thead>
+      <tbody>
+        {% for e in logs %}
+        <tr class="{% if e.success %}log-ok{% else %}log-denied{% endif %}">
+          <td>{{ e.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td>
+            {% if e.success %}✓ granted{% else %}✗ denied{% endif %}
+            <br><small class="muted">{{ e.access_type }}</small>
+          </td>
+          <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted small">Showing last {{ logs|length }} entries for "{{ user.name }}".</p>
+    {% else %}
+    <p class="muted">No activity logged for this user yet.</p>
+    {% endif %}
+  </aside>
+</div>
+
+{% block scripts %}
+<script>
+  // Toggle visibility of the expiration field based on access type.
+  const perm = document.getElementById('radio-permanent');
+  const temp = document.getElementById('radio-temporary');
+  const expiresField = document.getElementById('expires-field');
+  function updateExpiresVisibility() {
+    expiresField.style.display = temp.checked ? '' : 'none';
+    if (temp.checked) {
+      expiresField.querySelector('input').required = true;
+    } else {
+      expiresField.querySelector('input').required = false;
+    }
+  }
+  perm.addEventListener('change', updateExpiresVisibility);
+  temp.addEventListener('change', updateExpiresVisibility);
+</script>
+{% endblock %}
+{% endblock %}

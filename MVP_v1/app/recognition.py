@@ -9,7 +9,11 @@ Every `RECOGNITION_INTERVAL_MS`:
   4. Periodically (every 30s) health-check the ML service so the UI can
      surface "ML offline" warnings.
 
-Runs as an asyncio task launched from `main.py` lifespan.
+Issue #79: Python-level logging is now state-transition only — `log.info`
+fires only when the verdict changes from the previous tick, not on every
+tick. The DB audit log has its own transition filter inside
+`FaceDatabase.recognize()`. Log rotation (`db.purge_old_logs(30)`) runs
+once every 24h.
 """
 
 from __future__ import annotations
@@ -38,6 +42,7 @@ class RecognitionLoop:
         *,
         threshold: float,
         interval_ms: int,
+        log_retention_days: int = 30,
     ):
         self._db = db
         self._ml = ml
@@ -48,6 +53,10 @@ class RecognitionLoop:
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self._last_health_check: float = 0.0
+        self._last_log_purge: float = time.time()
+        self._log_retention_days = log_retention_days
+        # Last Python-log verdict — only log changes (issue #79).
+        self._last_logged_verdict: str | None = None
 
     async def start(self) -> None:
         if self._task is None or self._task.done():
@@ -64,12 +73,29 @@ class RecognitionLoop:
 
     async def _run(self) -> None:
         log.info("Recognition loop started (interval=%.3fs)", self._interval)
+        # Initial log purge on startup (issue #79).
+        try:
+            n = await asyncio.to_thread(
+                self._db.purge_old_logs, self._log_retention_days
+            )
+            if n:
+                log.info(
+                    "Purged %d old log entries (>%d days)",
+                    n,
+                    self._log_retention_days,
+                )
+        except Exception:
+            log.exception("Initial log purge failed")
+        self._last_log_purge = time.time()
+
         while not self._stop.is_set():
             try:
                 await self._tick()
             except Exception:  # pragma: no cover — defensive
                 log.exception("Recognition tick crashed")
-                self._state.update(CurrentVerdict(verdict="error", name="Recognition loop crashed"))
+                self._state.update(
+                    CurrentVerdict(verdict="error", name="Recognition loop crashed")
+                )
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._interval)
             except TimeoutError:
@@ -84,15 +110,38 @@ class RecognitionLoop:
             self._state.set_ml_health(healthy)
             self._last_health_check = now
             if not healthy:
-                self._state.update(CurrentVerdict(verdict="error", name="ML service unreachable"))
+                self._log_verdict_change("error", "ML service unreachable")
+                self._state.update(
+                    CurrentVerdict(verdict="error", name="ML service unreachable")
+                )
                 return
+
+        # Throttled log rotation (issue #79) — once every 24h.
+        if now - self._last_log_purge > 86400.0:
+            try:
+                n = await asyncio.to_thread(
+                    self._db.purge_old_logs, self._log_retention_days
+                )
+                if n:
+                    log.info(
+                        "Purged %d old log entries (>%d days)",
+                        n,
+                        self._log_retention_days,
+                    )
+            except Exception:
+                log.exception("Log purge failed")
+            self._last_log_purge = now
 
         latest = await self._ml.get_latest()
         if latest is None:
-            self._state.update(CurrentVerdict(verdict="error", name="ML returned no frame"))
+            self._log_verdict_change("error", "ML returned no frame")
+            self._state.update(
+                CurrentVerdict(verdict="error", name="ML returned no frame")
+            )
             return
 
         if not latest.faces:
+            self._log_verdict_change("idle", "")
             self._state.update(CurrentVerdict(verdict="idle"))
             return
 
@@ -111,6 +160,10 @@ class RecognitionLoop:
         )
 
         if result.access_type == "unknown":
+            self._log_verdict_change(
+                "denied",
+                f"best_score={result.score:.3f} threshold={self._threshold:.3f}",
+            )
             self._state.update(
                 CurrentVerdict(
                     verdict="denied",
@@ -120,14 +173,13 @@ class RecognitionLoop:
                     timestamp=time.time(),
                 )
             )
-            log.info(
-                "Denied: best_score=%.3f threshold=%.3f",
-                result.score,
-                self._threshold,
-            )
             return
 
         # Granted.
+        self._log_verdict_change(
+            "granted",
+            f"name={result.name} type={result.access_type} score={result.score:.3f}",
+        )
         self._state.update(
             CurrentVerdict(
                 verdict="granted",
@@ -138,15 +190,25 @@ class RecognitionLoop:
                 timestamp=time.time(),
             )
         )
-        log.info(
-            "Granted: name=%s type=%s score=%.3f",
-            result.name,
-            result.access_type,
-            result.score,
-        )
         # Trigger the servo in a thread — even GpioServo's open() returns
         # quickly, but we don't want any chance of blocking the loop.
         await asyncio.to_thread(self._servo.open)
+
+    def _log_verdict_change(self, verdict: str, detail: str) -> None:
+        """Issue #79 — only emit a Python log line when the verdict changes
+        from the previous tick. Same verdict back-to-back is suppressed."""
+        if self._last_logged_verdict == verdict:
+            return
+        self._last_logged_verdict = verdict
+        if verdict == "granted":
+            log.info("Granted: %s", detail)
+        elif verdict == "denied":
+            log.info("Denied: %s", detail)
+        elif verdict == "error":
+            log.warning("Error: %s", detail)
+        elif verdict == "idle":
+            # Idle transitions are debug-level — not interesting in prod.
+            log.debug("Idle: %s", detail)
 
 
 def register_one(

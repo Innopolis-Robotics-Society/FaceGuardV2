@@ -362,3 +362,96 @@ opens `/dev/video0`.
 ## License
 
 MIT — see [LICENSE](../LICENSE) in the repository root.
+
+---
+
+## Issues #76 / #77 / #78 / #79 — latest changes
+
+### Issue #76 — Unified user table + CRUD + type switching
+
+The schema was previously split into two tables: `users` (permanent) and
+`guests` (temporary). They are now unified into a single `users` table:
+
+```sql
+CREATE TABLE users (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT UNIQUE NOT NULL,
+    embedding   BLOB NOT NULL,
+    type        TEXT NOT NULL DEFAULT 'permanent'
+                CHECK(type IN ('permanent', 'temporary')),
+    expires_at  TIMESTAMP,                   -- NULL for permanent
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Migration:** existing DBs with the legacy two-table layout are
+auto-migrated on startup (`FaceDatabase._migrate_legacy_two_tables()`).
+IDs are NOT preserved (legacy `users` and `guests` both started at 1,
+so conflicts are inevitable) — but the audit log uses `name`, not `id`,
+so traceability is preserved.
+
+**New DB methods:**
+- `register_user(name, embedding, type='permanent', expires_at=None)`
+- `update_user(user_id, *, name=None, type=None, expires_at=None, embedding=None)`
+- `list_users(type_filter=None, include_expired=True)`
+- `purge_expired()` — replaces `purge_expired_guests()`
+- Backward-compat wrappers: `register_guest`, `register_guest_for_days`,
+  `list_guests`, `get_guest`, `delete_guest` — all delegate to the
+  unified API.
+
+### Issue #78 — PUT / GET JSON API
+
+New JSON endpoints under `/backend/users[/{id}]`:
+
+| Method | Path                       | Body                       | Returns                 |
+|--------|----------------------------|----------------------------|-------------------------|
+| GET    | `/backend/users`           | `?type=&include_expired=`  | `{users: [...]}`        |
+| GET    | `/backend/users/{id}`      | —                          | user dict / 404         |
+| PUT    | `/backend/users/{id}`      | `{name?, type?, expires_at?, embedding?}` | updated user |
+| DELETE | `/backend/users/{id}`      | —                          | `{deleted: id}` / 404   |
+
+PUT validation:
+- `type` must be `'permanent'` or `'temporary'`.
+- `expires_at` is required when switching to `temporary` (unless the
+  user already has a future `expires_at`).
+- `embedding` must be a list of exactly 512 floats.
+- Duplicate `name` returns 409.
+- Nonexistent `user_id` returns 404.
+
+### Issue #77 — User detail + edit page
+
+New HTML page at `/users/{id}`:
+- Shows name, type (with badge), expiration (if temporary), creation date.
+- Edit form with name + access type + expiration date picker.
+- The expiration field is shown/hidden automatically based on the
+  selected access type (small JS snippet).
+- "Danger zone" with delete button.
+- Right panel shows the last 50 audit-log entries for this user.
+
+The main `/users` list now links each user name to its detail page.
+
+Form submissions go to `POST /users/{id}/update` which forwards to
+`db.update_user()` and redirects back to the detail page.
+
+### Issue #79 — Logging cleanup
+
+**ML service (`ml_service/main.py` + `ml_stub/main.py`):**
+- uvicorn `--log-level warning` (set both in code and Dockerfiles).
+- Custom `_HealthFilter` removes `GET /health` lines from the access log.
+
+**Backend:**
+- New `FaceDatabase.purge_old_logs(days=30)` deletes audit entries
+  older than 30 days. Called on startup and then once every 24h from
+  the recognition loop. Retention is configurable via
+  `LOG_RETENTION_DAYS` env var.
+- `recognize()` now tracks the last `(access_type, name)` state and
+  writes a log row **only on state transitions**. Repeated identical
+  verdicts no longer flood the audit log. Pass
+  `log_transitions_only=False` to force per-call logging (used in some
+  unit tests).
+- Python-level `log.info("Denied: ...")` / `log.info("Granted: ...")`
+  in `recognition.py` are also state-transition only.
+
+End-to-end smoke check: with the recognition loop polling at 500ms, the
+backend log now produces a single `Denied` line when the camera sees an
+unknown face — previously it produced 2 such lines per second.

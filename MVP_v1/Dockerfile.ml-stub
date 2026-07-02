@@ -17,4 +17,4 @@ RUN pip install --no-cache-dir -r ml_stub/requirements.txt
 COPY ml_stub/ ./ml_stub/
 
 EXPOSE 8001
-CMD ["uvicorn", "ml_stub.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "ml_stub.main:app", "--host", "0.0.0.0", "--port", "8001", "--log-level", "warning"]

@@ -2,12 +2,17 @@
 
 Replaces ml_stub. Runs on Raspberry Pi or laptop.
 Uses InsightFace (buffalo_l) for detection + 512-dim embeddings.
+
+Issue #79 — logging cleanup:
+  * uvicorn access log level set to WARNING (only errors, not every request).
+  * GET /health is filtered out from access logs entirely.
 """
 
 from __future__ import annotations
 
 import asyncio
 import io
+import logging
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -17,7 +22,7 @@ import cv2
 
 # --- InsightFace ---
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
 from insightface.app import FaceAnalysis
 from PIL import Image, ImageDraw
@@ -128,6 +133,25 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="FaceGuard ML Service", version="1.0.0", lifespan=lifespan)
 
 
+# Issue #79 — filter /health out of access logs.
+class _HealthFilter(logging.Filter):
+    """Suppress access-log lines that hit /health."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            msg = record.getMessage()
+        except Exception:  # pragma: no cover — defensive
+            return True
+        # uvicorn access log format includes "GET /health ..." — match it.
+        if "/health" in msg and " 200 " in msg:
+            return False
+        return True
+
+
+# Apply the filter to uvicorn's access logger.
+logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "ml-service"}
@@ -163,4 +187,10 @@ async def ml_stream():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8001)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8001,
+        # Issue #79 — WARNING level for general operations.
+        log_level="warning",
+    )

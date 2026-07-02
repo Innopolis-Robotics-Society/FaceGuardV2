@@ -1,4 +1,7 @@
-"""Page routes: dashboard, users list, registration form, logs."""
+"""Page routes: dashboard, registration form, logs.
+
+User list + detail pages live in `routes/users.py` (issue #76/#77).
+"""
 
 from __future__ import annotations
 
@@ -31,24 +34,6 @@ async def dashboard(
     )
 
 
-@router.get("/users")
-async def users_page(
-    request: Request,
-    _admin=Depends(require_admin),
-    db: FaceDatabase = Depends(),
-):
-    users = db.list_users()
-    guests = db.list_guests(include_expired=False)
-    return templates.TemplateResponse(
-        request,
-        "users.html",
-        {
-            "users": users,
-            "guests": guests,
-        },
-    )
-
-
 @router.get("/register")
 async def register_page(
     request: Request,
@@ -59,26 +44,6 @@ async def register_page(
         "register.html",
         {
             "frame_count": 5,
-        },
-    )
-
-
-@router.get("/logs")
-async def logs_page(
-    request: Request,
-    _admin=Depends(require_admin),
-    db: FaceDatabase = Depends(),
-    today: bool = Query(False),
-    q: str | None = Query(None),
-):
-    entries = db.list_logs(limit=300, today_only=today, user_filter=q)
-    return templates.TemplateResponse(
-        request,
-        "logs.html",
-        {
-            "entries": entries,
-            "today_filter": today,
-            "query": q or "",
         },
     )
 
@@ -99,6 +64,26 @@ async def register_options(
         request,
         "partials/guest_options.html",
         {},
+    )
+
+
+@router.get("/logs")
+async def logs_page(
+    request: Request,
+    _admin=Depends(require_admin),
+    db: FaceDatabase = Depends(),
+    today: bool = Query(False),
+    q: str | None = Query(None),
+):
+    entries = db.list_logs(limit=300, today_only=today, user_filter=q)
+    return templates.TemplateResponse(
+        request,
+        "logs.html",
+        {
+            "entries": entries,
+            "today_filter": today,
+            "query": q or "",
+        },
     )
 
 
