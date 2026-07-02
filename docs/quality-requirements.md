@@ -4,13 +4,13 @@ FaceGuardV2 quality requirements for Assignment 4.
 
 ## QR index
 
-| QR ID | Title | ISO/IEC 25010 sub-characteristic | Linked QRT |
-|---|---|---|---|
-| QR-001 | Correct face recognition decision | Functional correctness | QRT-001, QRT-002, QRT-003 |
-| QR-002 | Expired guest access denial | Integrity | QRT-004 |
-| QR-003 | Secure password verification | Confidentiality | QRT-005 |
-| QR-004 | Servo emulator operability | Operability | QRT-006 |
-| QR-005 | Recognition audit logging | Accountability | QRT-007 |
+| QR ID | Title | ISO/IEC 25010 sub-characteristic | Linked QRT | Related ADRs |
+|---|---|---|---|---|
+| QR-001 | Correct face recognition decision | Functional correctness | QRT-001, QRT-002, QRT-003 | [ADR-001](architecture/adr/ADR-001-separate-backend-and-ml-service.md) |
+| QR-002 | Expired guest access denial | Integrity | QRT-004 | [ADR-002](architecture/adr/ADR-002-use-sqlite-through-face-database.md) |
+| QR-003 | Secure password verification | Confidentiality | QRT-005 | [ADR-003](architecture/adr/ADR-003-session-auth-and-password-hashing.md) |
+| QR-004 | Servo emulator operability | Operability | QRT-006 | [ADR-004](architecture/adr/ADR-004-servo-abstraction-with-emulated-mode.md) |
+| QR-005 | Recognition audit logging | Accountability | QRT-007 | [ADR-002](architecture/adr/ADR-002-use-sqlite-through-face-database.md) |
 
 ---
 
