@@ -1,0 +1,68 @@
+@startuml
+left to right direction
+skinparam componentStyle uml2
+
+title FaceGuardV2 - Deployment View
+
+actor "Admin / Reviewer" as Admin
+
+node "Admin device\nBrowser" as Browser {
+    artifact "Web Admin UI\nHTML + HTMX + JS" as WebUI
+}
+
+node "Deployment host\nRaspberry Pi 4 or x86 laptop" as Host {
+
+    node "Docker Compose project\nfaceguard network" as Compose {
+
+        node "backend container\nfaceguard-backend" as BackendContainer {
+            component "FastAPI backend" as Backend
+            component "Auth + routes" as AuthRoutes
+            component "Recognition logic" as Recognition
+            component "Servo abstraction" as ServoAbstraction
+            component "FaceDatabase DAL" as DAL
+        }
+
+        node "ml container\nfaceguard-ml or ML stub" as MLContainer {
+            component "ML service\nCamera + InsightFace" as MLService
+        }
+    }
+
+    database "Persistent SQLite file\n/data/faces.db" as SQLite
+    artifact ".env\nlocal runtime config\nnot committed" as Env
+}
+
+node "Hardware boundary\nRaspberry Pi deployment" as Hardware {
+    node "Camera\n/dev/video0" as Camera
+    node "Servo + LED\nGPIO BCM 18" as Servo
+}
+
+cloud "GitHub" as GitHub {
+    component "Repository\nsource + docs" as Repo
+    component "GitHub Actions\nCI checks" as CI
+}
+
+Admin --> WebUI : HTTP\nhttp://host:8000
+WebUI --> Backend : pages / HTMX / JSON / SSE
+Backend --> MLService : HTTP\n/ml/latest, /ml/stream
+Backend --> SQLite : SQL via DAL
+Backend --> Env : reads settings
+
+MLService --> Camera : video frames
+ServoAbstraction --> Servo : GPIO signal\nor emulated mode
+
+Repo --> CI : PR / main workflow
+CI --> Repo : lint, tests,\nQRTs, link checks
+
+note right of Env
+Production secrets and device-specific
+settings are supplied through .env
+or CI/deployment secrets, not Git.
+end note
+
+note bottom of SQLite
+The database is mounted outside
+the backend container so it survives
+container rebuilds.
+end note
+
+@enduml
