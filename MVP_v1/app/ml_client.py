@@ -33,6 +33,7 @@ from dataclasses import dataclass
 import httpx
 import numpy as np
 
+
 log = logging.getLogger(__name__)
 
 
