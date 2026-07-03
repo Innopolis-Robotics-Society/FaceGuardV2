@@ -11,10 +11,24 @@ const lastUser    = document.getElementById("last-user");
 const lastScore   = document.getElementById("last-score");
 const mlStatus    = document.getElementById("ml-status");
 const servoState  = document.getElementById("servo-state");
+const livenessOverlay = document.getElementById("liveness-overlay");
+const livenessBar = document.getElementById("liveness-bar");
+const livenessEar = document.getElementById("liveness-ear");
 
 function applyVerdict(data) {
   // Reset class
   overlay.className = "verdict-overlay " + data.verdict;
+
+  // Liveness UI
+  if (data.verdict === "liveness_check") {
+    livenessOverlay.classList.remove("hidden");
+    livenessBar.style.width = "100%";
+    livenessBar.style.background = "var(--fg-scanning)";
+    livenessEar.textContent = "EAR: " + (data.liveness_ear || 0).toFixed(3);
+  } else {
+    livenessOverlay.classList.add("hidden");
+  }
+
 
   switch (data.verdict) {
     case "granted":
@@ -25,9 +39,19 @@ function applyVerdict(data) {
       doorStatus.style.color = "#2e7d32";
       servoState.textContent = "Triggered (open)";
       break;
+    case "liveness_check":
+      verdictText.textContent = "Blink for access: " + data.name;
+      verdictMeta.textContent = `Liveness check · EAR ${(data.liveness_ear || 0).toFixed(3)}`;
+      doorStatus.textContent = "Locked";
+      doorStatus.style.color = "#f9a825";
+      servoState.textContent = "Idle (waiting for blink)";
+      break;
+
     case "denied":
       verdictText.textContent = "Access denied: " + data.name;
-      verdictMeta.textContent = `score ${data.score.toFixed(3)}`;
+      verdictMeta.textContent = data.liveness_status === "failed"
+        ? `Liveness failed · score ${data.score.toFixed(3)}`
+        : `score ${data.score.toFixed(3)}`;
       doorStatus.textContent = "Locked";
       doorStatus.style.color = "#c62828";
       servoState.textContent = "Idle";

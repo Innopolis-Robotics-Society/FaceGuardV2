@@ -22,7 +22,7 @@ from typing import Literal
 
 from .database import AccessType
 
-Verdict = Literal["granted", "denied", "scanning", "idle", "error"]
+Verdict = Literal["granted", "denied", "scanning", "idle", "error", "liveness_check"]
 
 
 @dataclass
@@ -43,6 +43,9 @@ class CurrentVerdict:
     access_type: AccessType = "unknown"
     matched_user_id: int | None = None
     timestamp: float = field(default_factory=time.time)
+    # LIVENESS
+    liveness_status: Literal["disabled", "checking", "passed", "failed"] = "disabled"
+    liveness_ear: float = 0.0
 
     def to_dict(self) -> dict:
         return {
@@ -53,6 +56,9 @@ class CurrentVerdict:
             "matched_user_id": self.matched_user_id,
             "timestamp": datetime.fromtimestamp(self.timestamp, tz=UTC).isoformat(),
             "is_door_open": self.verdict == "granted",
+            # LIVENESS
+            "liveness_status": self.liveness_status,
+            "liveness_ear": round(self.liveness_ear, 4),
         }
 
 

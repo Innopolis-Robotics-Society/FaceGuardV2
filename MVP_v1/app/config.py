@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: str = "INFO"
 
+    # --- Liveness ---
+    liveness_enabled: bool = Field(default=False, description="Need blinking for access")
+    liveness_ear_threshold: float = Field(default=0.20, ge=0.05, le=0.40)
+    liveness_min_blink_duration_ms: int = Field(default=100, ge=50)
+    liveness_timeout_sec: float = Field(default=3.0, ge=1.0, le=10.0)
+
     # --- Audit log retention (issue #79) ---
     # Auto-delete log entries older than this many days.
     log_retention_days: int = Field(default=30, ge=1)

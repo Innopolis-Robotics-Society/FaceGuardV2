@@ -28,10 +28,12 @@ CREATE TABLE IF NOT EXISTS logs (
     score        REAL,
     access_type  TEXT    CHECK(access_type IN ('user', 'guest', 'unknown')) NOT NULL,
     success      BOOLEAN NOT NULL,
+    liveness_passed  BOOLEAN,
     timestamp    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_logs_timestamp   ON logs(timestamp);
 CREATE INDEX IF NOT EXISTS idx_logs_access_type ON logs(access_type);
+CREATE INDEX IF NOT EXISTS idx_logs_liveness ON logs(liveness_passed);
 
 -- Admin accounts for the web UI.
 CREATE TABLE IF NOT EXISTS admins (

@@ -29,6 +29,7 @@
         <th>Name</th>
         <th>Type</th>
         <th>Score</th>
+        <th>Liveness</th>
         <th>Result</th>
       </tr>
     </thead>
@@ -39,6 +40,12 @@
         <td>{{ e.name }}</td>
         <td>{{ e.access_type }}</td>
         <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
+        <td>
+          {% if e.liveness_passed is none %}—
+          {% elif e.liveness_passed %}✓ passed
+          {% else %}✗ failed
+          {% endif %}
+        </td>
         <td>
           {% if e.success %}✓ granted{% else %}✗ denied{% endif %}
         </td>

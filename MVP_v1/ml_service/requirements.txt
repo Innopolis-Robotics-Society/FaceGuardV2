@@ -4,3 +4,4 @@ opencv-python-headless
 insightface
 numpy
 Pillow
+mediapipe==0.10.9
