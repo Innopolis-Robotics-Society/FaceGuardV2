@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import io
+import random
 import threading
 import time
-import random
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 import cv2
-import numpy as np
 import mediapipe as mp
+import numpy as np
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from insightface.app import FaceAnalysis
@@ -42,7 +42,7 @@ next_challenge_in = random.uniform(2.0, 5.0)
 
 # --- MediaPipe Landmarks ---
 RIGHT_EYE_IDX = [362, 385, 387, 263, 373, 380]
-LEFT_EYE_IDX  = [33, 160, 158, 133, 153, 144]
+LEFT_EYE_IDX = [33, 160, 158, 133, 153, 144]
 
 
 def _now_iso() -> str:
@@ -52,16 +52,16 @@ def _now_iso() -> str:
 def init_model():
     """Load InsightFace (SC) and MediaPipe models once at startup."""
     global face_app, mp_face_mesh
-    
+
     face_app = FaceAnalysis(name="buffalo_sc", root="./models")
     face_app.prepare(ctx_id=-1, det_size=(640, 640))
-    
+
     mp_face_mesh_module = mp.solutions.face_mesh
     mp_face_mesh = mp_face_mesh_module.FaceMesh(
         max_num_faces=1,
         refine_landmarks=True,
         min_detection_confidence=0.5,
-        min_tracking_confidence=0.5
+        min_tracking_confidence=0.5,
     )
 
 
@@ -74,7 +74,7 @@ def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
     v1 = np.linalg.norm(pts[1] - pts[5])
     v2 = np.linalg.norm(pts[2] - pts[4])
     h = np.linalg.norm(pts[0] - pts[3])
-    
+
     if h < 1e-6:
         return 0.0
     return float((v1 + v2) / (2.0 * h))
@@ -86,18 +86,18 @@ def process_frame(frame: np.ndarray) -> tuple[bytes, dict]:
 
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     faces = face_app.get(frame)
-    
+
     img = Image.fromarray(rgb_frame)
     draw = ImageDraw.Draw(img)
 
     current_time = time.time()
-    
+
     if not challenge_active:
         if current_time > next_challenge_in:
             challenge_active = True
             challenge_start_time = current_time
             challenge_duration = random.uniform(1.5, 3.0)
-            blink_counter = 0 
+            blink_counter = 0
     else:
         if current_time > (challenge_start_time + challenge_duration):
             challenge_active = False
@@ -107,21 +107,23 @@ def process_frame(frame: np.ndarray) -> tuple[bytes, dict]:
     if not faces:
         blink_counter = 0
         liveness_valid_until = 0.0
-        
+
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=85)
         return buf.getvalue(), {"timestamp": _now_iso(), "faces": [], "status": "NO_FACE"}
 
-    faces = sorted(faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]), reverse=True)
-    
+    faces = sorted(
+        faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]), reverse=True
+    )
+
     h_img, w_img, _ = frame.shape
     mp_results = mp_face_mesh.process(rgb_frame)
-    
+
     main_face_landmarks = None
     if mp_results.multi_face_landmarks:
-        main_face_landmarks = np.array([
-            [lm.x * w_img, lm.y * h_img] for lm in mp_results.multi_face_landmarks[0].landmark
-        ])
+        main_face_landmarks = np.array(
+            [[lm.x * w_img, lm.y * h_img] for lm in mp_results.multi_face_landmarks[0].landmark]
+        )
 
     face_data = []
     primary_face = faces[0]
@@ -148,32 +150,38 @@ def process_frame(frame: np.ndarray) -> tuple[bytes, dict]:
                     status_text = "VERIFIED!"
                 else:
                     liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
-            
+
             blink_counter = 0
 
         is_live = current_time < liveness_valid_until
-        
+
         if challenge_active:
-            status_text = f"BLINK NOW! ({int(challenge_duration - (current_time - challenge_start_time))}s)"
-            color = (0, 165, 255) # Orange
+            status_text = (
+                f"BLINK NOW! ({int(challenge_duration - (current_time - challenge_start_time))}s)"
+            )
+            color = (0, 165, 255)  # Orange
         elif is_live:
             status_text = "ACCESS GRANTED"
-            color = (0, 255, 0) # Green
+            color = (0, 255, 0)  # Green
         else:
             status_text = "LOCKED"
-            color = (0, 0, 255) # Red
-            
+            color = (0, 0, 255)  # Red
+
     draw.rectangle([bbox[0], bbox[1], bbox[2], bbox[3]], outline=color, width=3)
     draw.text((bbox[0], bbox[1] - 25), status_text, fill=color)
     draw.text((bbox[0], bbox[1] - 10), f"EAR: {ear_avg:.2f}", fill=(255, 255, 255))
 
-    face_data.append({
-        "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
-        "embedding": primary_face.embedding.tolist() if primary_face.embedding is not None else [],
-        "confidence": float(primary_face.det_score),
-        "ear": round(ear_avg, 4),
-        "liveness_passed": is_live,
-    })
+    face_data.append(
+        {
+            "bbox": [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
+            "embedding": primary_face.embedding.tolist()
+            if primary_face.embedding is not None
+            else [],
+            "confidence": float(primary_face.det_score),
+            "ear": round(ear_avg, 4),
+            "liveness_passed": is_live,
+        }
+    )
 
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
@@ -213,6 +221,7 @@ def capture_loop():
 
 # --- FastAPI endpoints ---
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_model()
@@ -222,7 +231,9 @@ async def lifespan(app: FastAPI):
     if mp_face_mesh:
         mp_face_mesh.close()
 
+
 app = FastAPI(title="FaceGuard ML Service", version="1.4.0", lifespan=lifespan)
+
 
 @app.get("/health")
 async def health():
@@ -258,4 +269,5 @@ async def ml_stream():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8001)

@@ -20,9 +20,7 @@ exposes two endpoints:
           ]
         }
 
-A `ml_stub/` service ships with this repo so the backend can be
-developed and tested end-to-end without the real ML stack. See
-`ml_stub/main.py` for the contract reference implementation.
+The real ML service lives in `ml_service/main.py` (InsightFace + OpenCV).
 """
 
 from __future__ import annotations

@@ -1,8 +1,3 @@
-// =========================================================
-// Dashboard live updates via SSE.
-// Renders the verdict overlay + status panel in real time.
-// =========================================================
-
 const overlay = document.getElementById("verdict-overlay");
 const verdictText = document.getElementById("verdict-text");
 const verdictMeta = document.getElementById("verdict-meta");
@@ -11,109 +6,85 @@ const lastUser    = document.getElementById("last-user");
 const lastScore   = document.getElementById("last-score");
 const mlStatus    = document.getElementById("ml-status");
 const servoState  = document.getElementById("servo-state");
-const livenessOverlay = document.getElementById("liveness-overlay");
-const livenessBar = document.getElementById("liveness-bar");
-const livenessEar = document.getElementById("liveness-ear");
 
 function applyVerdict(data) {
-  // Reset class
+  if (!data || !overlay) return;
+
+  // Обновляем класс для цвета
   overlay.className = "verdict-overlay " + data.verdict;
 
-  // Liveness UI
-  if (data.verdict === "liveness_check") {
-    livenessOverlay.classList.remove("hidden");
-    livenessBar.style.width = "100%";
-    livenessBar.style.background = "var(--fg-scanning)";
-    livenessEar.textContent = "EAR: " + (data.liveness_ear || 0).toFixed(3);
-  } else {
-    livenessOverlay.classList.add("hidden");
-  }
-
-
+  // Логика текста
   switch (data.verdict) {
     case "granted":
-      verdictText.textContent = "Access granted: " + data.name;
-      verdictMeta.textContent =
-        `${data.access_type} · score ${data.score.toFixed(3)}`;
-      doorStatus.textContent = "Open";
-      doorStatus.style.color = "#2e7d32";
-      servoState.textContent = "Triggered (open)";
+      verdictText.textContent = "Access granted: " + (data.name || "User");
+      verdictMeta.textContent = `${data.access_type || ''} · score ${(data.score || 0).toFixed(3)}`;
+      if(doorStatus) { doorStatus.textContent = "Open"; doorStatus.style.color = "#2e7d32"; }
+      if(servoState) servoState.textContent = "Triggered";
       break;
-    case "liveness_check":
-      verdictText.textContent = "Blink for access: " + data.name;
-      verdictMeta.textContent = `Liveness check · EAR ${(data.liveness_ear || 0).toFixed(3)}`;
-      doorStatus.textContent = "Locked";
-      doorStatus.style.color = "#f9a825";
-      servoState.textContent = "Idle (waiting for blink)";
-      break;
-
     case "denied":
-      verdictText.textContent = "Access denied: " + data.name;
-      verdictMeta.textContent = data.liveness_status === "failed"
-        ? `Liveness failed · score ${data.score.toFixed(3)}`
-        : `score ${data.score.toFixed(3)}`;
-      doorStatus.textContent = "Locked";
-      doorStatus.style.color = "#c62828";
-      servoState.textContent = "Idle";
-      break;
-    case "scanning":
-      verdictText.textContent = "Scanning...";
-      verdictMeta.textContent = "";
+      verdictText.textContent = "Access denied";
+      verdictMeta.textContent = `score ${(data.score || 0).toFixed(3)}`;
+      if(doorStatus) { doorStatus.textContent = "Locked"; doorStatus.style.color = "#c62828"; }
+      if(servoState) servoState.textContent = "Idle";
       break;
     case "idle":
       verdictText.textContent = "Waiting for face...";
       verdictMeta.textContent = "";
-      doorStatus.textContent = "Locked";
-      doorStatus.style.color = "#757575";
-      servoState.textContent = "Idle";
+      if(doorStatus) { doorStatus.textContent = "Locked"; doorStatus.style.color = "#757575"; }
+      if(servoState) servoState.textContent = "Idle";
       break;
     case "error":
       verdictText.textContent = "System error";
       verdictMeta.textContent = data.name || "";
-      doorStatus.textContent = "—";
-      servoState.textContent = "—";
+      if(doorStatus) doorStatus.textContent = "—";
+      if(servoState) servoState.textContent = "—";
       break;
+    default:
+      // Для статусов scanning или других
+      verdictText.textContent = data.verdict;
   }
 
+  // Обновляем инфо о последнем юзере
   if (data.name && data.verdict !== "idle" && data.verdict !== "error") {
-    lastUser.textContent = data.name;
-    lastScore.textContent = data.score.toFixed(3);
+    if(lastUser) lastUser.textContent = data.name;
+    if(lastScore) lastScore.textContent = (data.score || 0).toFixed(3);
   }
 }
 
 function connectSSE() {
   const es = new EventSource("/status/events");
-
   es.addEventListener("verdict", (e) => {
     try {
-      applyVerdict(JSON.parse(e.data));
+      const data = JSON.parse(e.data);
+      console.log("SSE Verdict:", data); // <-- Смотри сюда в консоли!
+      applyVerdict(data);
     } catch (err) {
-      console.warn("Bad SSE payload:", err);
+      console.error("SSE Error:", err);
     }
   });
-
-  es.addEventListener("ping", () => {
-    // Heartbeat — no UI update needed.
-  });
-
+  
   es.onerror = () => {
-    console.warn("SSE disconnected, retrying in 3s...");
+    console.warn("SSE disconnected");
     es.close();
     setTimeout(connectSSE, 3000);
   };
 }
 
-// ML health — poll every 10s (cheap endpoint, no SSE).
 async function pollHealth() {
   try {
     const r = await fetch("/status/snapshot");
     const data = await r.json();
-    mlStatus.textContent = data.ml_healthy ? "Online" : "Offline";
-    mlStatus.style.color = data.ml_healthy ? "#2e7d32" : "#c62828";
-    // Initial paint
-    applyVerdict(data);
+    console.log("Health Snapshot:", data); // <-- И сюда!
+    
+    if (mlStatus) {
+      mlStatus.textContent = data.ml_healthy ? "Online" : "Offline";
+      mlStatus.style.color = data.ml_healthy ? "#2e7d32" : "#c62828";
+    }
   } catch (e) {
-    mlStatus.textContent = "Unknown";
+    if (mlStatus) {
+      mlStatus.textContent = "Unknown";
+      mlStatus.style.color = "#757575";
+    }
   }
 }
 

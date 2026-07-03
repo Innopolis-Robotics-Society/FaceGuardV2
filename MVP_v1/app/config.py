@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     liveness_min_blink_duration_ms: int = Field(default=100, ge=50)
     liveness_timeout_sec: float = Field(default=3.0, ge=1.0, le=10.0)
 
+    # --- Audit log retention (issue #79) ---
+    # Auto-delete log entries older than this many days.
+    log_retention_days: int = Field(default=30, ge=1)
+
+    # --- Debug ---
+    # Enable /debug/seed-user endpoint for offline testing without ML.
+    allow_debug_seed: bool = False
+
     @field_validator("ml_service_url")
     @classmethod
     def _strip_trailing_slash(cls, v: str) -> str:

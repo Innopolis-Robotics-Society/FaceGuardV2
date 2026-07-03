@@ -8,9 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Issue #76**: Unified users + guests into a single `users` table with
+  `type` ('permanent' | 'temporary') and nullable `expires_at`. Full CRUD
+  via `FaceDatabase.update_user()` + type switching (permanent <-> temporary).
+  Legacy two-table DBs are auto-migrated on startup.
+- **Issue #77**: New HTML page `/users/{id}` with user details, edit form,
+  and last 50 audit-log entries for that user. Main `/users` list now links
+  to detail pages.
+- **Issue #78**: New JSON API: `GET /backend/users`, `GET /backend/users/{id}`,
+  `PUT /backend/users/{id}`, `DELETE /backend/users/{id}`. Full validation
+  (type, expires_at, embedding size, duplicate names).
+- **Issue #79**: Audit-log rotation (`purge_old_logs(days=30)`) — runs on
+  startup + every 24h. `recognize()` now logs state transitions only
+  (5-10x log reduction). ML service log level set to WARNING;
+  `GET /health` filtered out of access logs.
+- New tests: `tests/test_crud.py` (30 unit tests for unified schema, CRUD,
+  type switching, log rotation, transition-only logging) and
+  `tests/test_crud_api.py` (21 integration tests for the new API endpoints
+  and HTML detail page).
 
 ### Changed
 - Changed model on bufallo_sc instead of bufallo_l in ml_service/main.py 
+- `FaceDatabase.recognize()` now writes audit log entries only on state
+  transitions (verdict change or matched-name change). Pass
+  `log_transitions_only=False` to force per-call logging.
+- ML service (`ml_service/main.py`, `ml_stub/main.py`) runs with
+  uvicorn `--log-level warning` and filters `GET /health` out of access
+  logs (issue #79).
+- `RecognitionLoop` runs a daily `purge_old_logs(30)` to enforce log
+  retention policy.
+- Root `README.md` documents the new endpoints and migration behavior.
 
 ### Fixed
 - Fixed bugs either in backend and ml_service

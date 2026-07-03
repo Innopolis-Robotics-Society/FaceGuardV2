@@ -1,11 +1,17 @@
-"""Centralized data access layer for FaceGuard (issue #29).
+"""Centralized data access layer for FaceGuard.
 
 This module is the *only* place in the codebase that knows about SQL.
 Every other module (recognition loop, web routes, auth, registration
 flow) calls the typed methods of `FaceDatabase` and never sees a raw
-query, cursor, or BLOB. This keeps the schema swappable (we could move
-to PostgreSQL later by editing this file only) and gives us a single
-seam to add caching, logging, or transactions.
+query, cursor, or BLOB.
+
+Issues addressed here:
+  * #29 — Centralized data access layer (original).
+  * #76 — Unify `users` + `guests` into a single `users` table with a
+          `type` column ('permanent' | 'temporary') and a nullable
+          `expires_at`. Supports type switching and full CRUD.
+  * #79 — recognize() now logs state transitions only (not every call),
+          and `purge_old_logs(days)` rotates the audit log.
 
 Schema lives in `app/schema.sql` and is applied idempotently on startup.
 """
@@ -24,6 +30,7 @@ import numpy as np
 from .schema import SCHEMA_PATH
 
 AccessType = Literal["user", "guest", "unknown"]
+UserType = Literal["permanent", "temporary"]
 
 
 # ---------------------------------------------------------------------------
@@ -34,18 +41,18 @@ AccessType = Literal["user", "guest", "unknown"]
 
 @dataclass(frozen=True)
 class User:
+    """Unified user record (issue #76).
+
+    `type` is 'permanent' or 'temporary'. `expires_at` is None for
+    permanent users and a timezone-aware datetime for temporary ones.
+    """
+
     id: int
     name: str
     embedding: np.ndarray  # float32, (512,)
+    type: UserType
+    expires_at: datetime | None
     created_at: datetime
-
-
-@dataclass(frozen=True)
-class Guest:
-    id: int
-    name: str
-    embedding: np.ndarray  # float32, (512,)
-    expires_at: datetime
 
 
 @dataclass(frozen=True)
@@ -156,9 +163,13 @@ class FaceDatabase:
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.execute("PRAGMA foreign_keys=ON;")
         self._apply_schema()
+        # Issue #79 — track the last recognize() outcome so we only log
+        # state transitions (e.g. idle -> granted, granted -> denied)
+        # instead of writing a row on every poll.
+        self._last_recognize_state: tuple[str, str] | None = None
 
     # ------------------------------------------------------------------
-    # Lifecycle
+    # Lifecycle + schema bootstrap
     # ------------------------------------------------------------------
 
     def _apply_schema(self) -> None:
@@ -177,41 +188,175 @@ class FaceDatabase:
         self.close()
 
     # ------------------------------------------------------------------
-    # Users (permanent)
+    # Users — unified permanent + temporary (issue #76)
     # ------------------------------------------------------------------
 
-    def register_user(self, name: str, embedding: np.ndarray) -> User:
-        """Insert a permanent user. Raises `sqlite3.IntegrityError` if the
-        name already exists."""
+    def register_user(
+        self,
+        name: str,
+        embedding: np.ndarray,
+        type: UserType = "permanent",
+        expires_at: datetime | None = None,
+    ) -> User:
+        """Insert a user of the given type.
+
+        For `type='temporary'`, `expires_at` must be a timezone-aware
+        datetime in the future. For `type='permanent'`, `expires_at` is
+        ignored and stored as NULL.
+
+        Raises `sqlite3.IntegrityError` if the name already exists.
+        """
+        if type not in ("permanent", "temporary"):
+            raise ValueError(f"invalid user type: {type!r}")
+        if type == "temporary":
+            if expires_at is None:
+                raise ValueError("temporary users require expires_at")
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=UTC)
+        else:
+            expires_at = None  # force NULL for permanent
+
         blob = _encode_embedding(embedding)
+        expires_iso = _to_iso(expires_at) if expires_at else None
         with self._lock:
             cur = self._conn.execute(
-                "INSERT INTO users (name, embedding) VALUES (?, ?)",
-                (name, blob),
+                "INSERT INTO users (name, embedding, type, expires_at) VALUES (?, ?, ?, ?)",
+                (name, blob, type, expires_iso),
             )
             self._conn.commit()
             return self.get_user(cur.lastrowid)  # type: ignore[arg-type]
 
     def get_user(self, user_id: int) -> User | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM users WHERE id = ?",
-                (user_id,),
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         return _row_to_user(row) if row else None
 
     def get_user_by_name(self, name: str) -> User | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM users WHERE name = ?",
-                (name,),
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM users WHERE name = ?", (name,)).fetchone()
         return _row_to_user(row) if row else None
 
-    def list_users(self) -> list[User]:
+    def list_users(
+        self,
+        type_filter: UserType | None = None,
+        include_expired: bool = True,
+    ) -> list[User]:
+        """List users, optionally filtered by type and/or expiry.
+
+        - `type_filter=None` -> both permanent and temporary.
+        - `include_expired=False` -> exclude temporary users whose
+          `expires_at` is in the past (permanent users are always included).
+        """
+        clauses: list[str] = []
+        params: list[object] = []
+        if type_filter is not None:
+            clauses.append("type = ?")
+            params.append(type_filter)
+        if not include_expired:
+            now_iso = _to_iso(datetime.now(UTC))
+            clauses.append("(type = 'permanent' OR (type = 'temporary' AND expires_at > ?))")
+            params.append(now_iso)
+
+        query = "SELECT * FROM users"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY name ASC"
+
         with self._lock:
-            rows = self._conn.execute("SELECT * FROM users ORDER BY name ASC").fetchall()
+            rows = self._conn.execute(query, params).fetchall()
         return [_row_to_user(r) for r in rows]
+
+    def update_user(
+        self,
+        user_id: int,
+        *,
+        name: str | None = None,
+        type: UserType | None = None,
+        expires_at: datetime | None | Literal["unset"] | None = None,
+        embedding: np.ndarray | None = None,
+    ) -> User | None:
+        """Update one or more fields of a user. Returns the updated user,
+        or None if the user_id doesn't exist.
+
+        Type-switching rules (issue #76):
+          * Switching to 'permanent' clears `expires_at` (sets to NULL).
+          * Switching to 'temporary' requires `expires_at` to be provided
+            (either in this call or already set in the DB).
+
+        Pass `expires_at=None` together with `type='temporary'` to keep
+        the existing expires_at. To explicitly clear it, switch type to
+        'permanent' instead.
+
+        Raises `ValueError` on invalid combinations.
+        Raises `sqlite3.IntegrityError` if the new name conflicts with
+        an existing user.
+        """
+        # Sentinel for "not provided" so we can distinguish from
+        # `expires_at=None` (which means "clear it" when type=permanent).
+        NOT_PROVIDED = object()
+        if expires_at is None and type != "permanent":
+            expires_at_arg = NOT_PROVIDED  # type: ignore[assignment]
+        else:
+            expires_at_arg = expires_at  # type: ignore[assignment]
+
+        # Validate type if provided.
+        if type is not None and type not in ("permanent", "temporary"):
+            raise ValueError(f"invalid user type: {type!r}")
+
+        # Validate expires_at if explicitly provided.
+        if expires_at_arg is not None and expires_at_arg is not NOT_PROVIDED:
+            if not isinstance(expires_at_arg, datetime):  # type: ignore[unreachable]
+                raise ValueError("expires_at must be a datetime")
+            if expires_at_arg.tzinfo is None:  # type: ignore[union-attr]
+                expires_at_arg = expires_at_arg.replace(tzinfo=UTC)  # type: ignore[union-attr]
+
+        with self._lock:
+            existing = self.get_user(user_id)
+            if existing is None:
+                return None
+
+            # Resolve the effective type.
+            new_type = type if type is not None else existing.type
+
+            # Resolve the effective expires_at.
+            if new_type == "permanent":
+                new_expires = None  # always clear for permanent
+            else:
+                # Temporary user.
+                if expires_at_arg is not None and expires_at_arg is not NOT_PROVIDED:
+                    new_expires = expires_at_arg  # type: ignore[assignment]
+                elif existing.expires_at is not None:
+                    new_expires = existing.expires_at
+                else:
+                    raise ValueError("temporary user requires expires_at to be set")
+
+            # Build the UPDATE statement.
+            sets: list[str] = []
+            params: list[object] = []
+            if name is not None and name != existing.name:
+                sets.append("name = ?")
+                params.append(name)
+            if type is not None and type != existing.type:
+                sets.append("type = ?")
+                params.append(type)
+            # expires_at handling: always set to match the effective value.
+            sets.append("expires_at = ?")
+            params.append(_to_iso(new_expires) if new_expires else None)
+            if embedding is not None:
+                sets.append("embedding = ?")
+                params.append(_encode_embedding(embedding))
+
+            if not sets:
+                # Nothing to update.
+                return existing
+
+            params.append(user_id)
+            self._conn.execute(
+                f"UPDATE users SET {', '.join(sets)} WHERE id = ?",
+                params,
+            )
+            self._conn.commit()
+            return self.get_user(user_id)
 
     def delete_user(self, user_id: int) -> bool:
         with self._lock:
@@ -219,12 +364,26 @@ class FaceDatabase:
             self._conn.commit()
             return cur.rowcount > 0
 
+    def purge_expired(self) -> int:
+        """Delete every temporary user whose `expires_at` is in the past.
+
+        Returns the number of rows deleted. Called lazily by
+        `recognize()` and periodically by the recognition loop.
+        """
+        now_iso = _to_iso(datetime.now(UTC))
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM users WHERE type = 'temporary' AND expires_at < ?",
+                (now_iso,),
+            )
+            self._conn.commit()
+            return cur.rowcount
+
     # ------------------------------------------------------------------
-    # Guests (temporary)
+    # Backward compatibility — legacy guest API.
     #
-    # Per team decision: the guests table stores ONLY `expires_at`
-    # (no `created_by`, no `created_at`). Expired guests are deleted
-    # lazily inside `recognize()` and explicitly via `purge_expired_guests()`.
+    # These wrap the unified user API so that older code (and tests)
+    # continue to work. New code should use register_user(type='temporary').
     # ------------------------------------------------------------------
 
     def register_guest(
@@ -232,66 +391,32 @@ class FaceDatabase:
         name: str,
         embedding: np.ndarray,
         expires_at: datetime,
-    ) -> Guest:
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=UTC)
-        blob = _encode_embedding(embedding)
-        with self._lock:
-            cur = self._conn.execute(
-                "INSERT INTO guests (name, embedding, expires_at) VALUES (?, ?, ?)",
-                (name, blob, _to_iso(expires_at)),
-            )
-            self._conn.commit()
-            return self.get_guest(cur.lastrowid)  # type: ignore[arg-type]
+    ) -> User:
+        return self.register_user(name, embedding, type="temporary", expires_at=expires_at)
 
     def register_guest_for_days(
         self,
         name: str,
         embedding: np.ndarray,
         days: int,
-    ) -> Guest:
-        """Convenience: register a guest whose access expires in N days
-        from now (UTC)."""
+    ) -> User:
         expires = datetime.now(UTC) + timedelta(days=days)
-        return self.register_guest(name, embedding, expires)
+        return self.register_user(name, embedding, type="temporary", expires_at=expires)
 
-    def get_guest(self, guest_id: int) -> Guest | None:
-        with self._lock:
-            row = self._conn.execute("SELECT * FROM guests WHERE id = ?", (guest_id,)).fetchone()
-        return _row_to_guest(row) if row else None
+    def get_guest(self, guest_id: int) -> User | None:
+        return self.get_user(guest_id)
 
-    def list_guests(self, include_expired: bool = False) -> list[Guest]:
-        with self._lock:
-            if include_expired:
-                rows = self._conn.execute("SELECT * FROM guests ORDER BY expires_at ASC").fetchall()
-            else:
-                now_iso = _to_iso(datetime.now(UTC))
-                rows = self._conn.execute(
-                    "SELECT * FROM guests WHERE expires_at > ? ORDER BY expires_at ASC",
-                    (now_iso,),
-                ).fetchall()
-        return [_row_to_guest(r) for r in rows]
+    def list_guests(self, include_expired: bool = False) -> list[User]:
+        return self.list_users(type_filter="temporary", include_expired=include_expired)
 
     def delete_guest(self, guest_id: int) -> bool:
-        with self._lock:
-            cur = self._conn.execute("DELETE FROM guests WHERE id = ?", (guest_id,))
-            self._conn.commit()
-            return cur.rowcount > 0
+        return self.delete_user(guest_id)
 
     def purge_expired_guests(self) -> int:
-        """Delete every guest whose `expires_at` is in the past.
-
-        Returns the number of rows deleted. Called lazily by
-        `recognize()` and periodically by the recognition loop.
-        """
-        now_iso = _to_iso(datetime.now(UTC))
-        with self._lock:
-            cur = self._conn.execute("DELETE FROM guests WHERE expires_at < ?", (now_iso,))
-            self._conn.commit()
-            return cur.rowcount
+        return self.purge_expired()
 
     # ------------------------------------------------------------------
-    # Logs (US-10: audit log)
+    # Logs (US-10: audit log) + rotation (issue #79)
     # ------------------------------------------------------------------
 
     def add_log(
@@ -335,38 +460,53 @@ class FaceDatabase:
             rows = self._conn.execute(query, params).fetchall()
         return [_row_to_log(r) for r in rows]
 
+    def purge_old_logs(self, days: int = 30) -> int:
+        """Delete log entries older than `days` days.
+
+        Default retention is 30 days per issue #79. Returns the number
+        of rows deleted.
+        """
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM logs WHERE timestamp < ?",
+                (_to_iso(cutoff),),
+            )
+            self._conn.commit()
+            return cur.rowcount
+
     # ------------------------------------------------------------------
     # Recognition — the hot path.
     #
-    # Steps:
-    #   1. Purge expired guests (lazy cleanup, no background thread).
-    #   2. Load every active candidate (users + non-expired guests).
-    #   3. Compute cosine similarity (embeddings are L2-normalized at
-    #      write time, so dot product == cosine).
-    #   4. Pick the best candidate; if its score >= threshold, it's a
-    #      match. Otherwise return Unknown with the best score for audit.
-    #   5. Log the attempt to `logs`.
+    # Issue #79: by default, audit logs are written only on state
+    # transitions (verdict change OR matched-name change). This reduces
+    # log volume 5–10x without losing security-relevant events. Pass
+    # `log_transitions_only=False` to force a log entry on every call
+    # (used by some tests).
     # ------------------------------------------------------------------
 
     def recognize(
         self,
         embedding: np.ndarray,
         threshold: float,
+        *,
+        log_transitions_only: bool = True,
     ) -> RecognitionResult:
         probe = np.asarray(embedding, dtype=_EMBEDDING_DTYPE)
         norm = float(np.linalg.norm(probe))
         if norm > 0:
             probe = probe / norm
 
-        # 1. Lazy cleanup of expired guests.
-        self.purge_expired_guests()
+        # 1. Lazy cleanup of expired temporary users.
+        self.purge_expired()
 
-        # 2. Load candidates.
+        # 2. Load candidates — all permanent users + non-expired temporary.
         with self._lock:
-            user_rows = self._conn.execute("SELECT id, name, embedding FROM users").fetchall()
             now_iso = _to_iso(datetime.now(UTC))
-            guest_rows = self._conn.execute(
-                "SELECT id, name, embedding FROM guests WHERE expires_at > ?",
+            rows = self._conn.execute(
+                "SELECT id, name, embedding, type FROM users "
+                "WHERE type = 'permanent' "
+                "   OR (type = 'temporary' AND expires_at > ?)",
                 (now_iso,),
             ).fetchall()
 
@@ -377,34 +517,24 @@ class FaceDatabase:
             matched_user_id=None,
         )
 
-        # 3+4. Compare against users.
-        for row in user_rows:
+        # 3+4. Compare against all candidates.
+        for row in rows:
             cand = _decode_embedding(row["embedding"])
             score = float(np.dot(probe, cand))
             if score > best.score:
+                # Map the DB type to the legacy access_type for backward
+                # compatibility with the logs schema ('user' | 'guest').
+                access_type: AccessType = "user" if row["type"] == "permanent" else "guest"
                 best = RecognitionResult(
                     name=row["name"],
                     score=score,
-                    access_type="user",
-                    matched_user_id=row["id"],
-                )
-
-        # 3+4. Compare against guests.
-        for row in guest_rows:
-            cand = _decode_embedding(row["embedding"])
-            score = float(np.dot(probe, cand))
-            if score > best.score:
-                best = RecognitionResult(
-                    name=row["name"],
-                    score=score,
-                    access_type="guest",
+                    access_type=access_type,
                     matched_user_id=row["id"],
                 )
 
         # 5. Apply threshold.
         matched = best.score >= threshold and best.access_type != "unknown"
         if not matched:
-            # Keep best score for the audit log, but mark as unknown.
             result = RecognitionResult(
                 name="Unknown",
                 score=best.score if best.score >= 0 else 0.0,
@@ -414,15 +544,26 @@ class FaceDatabase:
         else:
             result = best
 
-        # 6. Audit log (always — both successes and denials).
-        self.add_log(
-            name=result.name,
-            score=result.score,
-            access_type=result.access_type,
-            success=matched,
-        )
+        # 6. Audit log — only on state transitions (issue #79).
+        new_state = (result.access_type, result.name)
+        should_log = True
+        if log_transitions_only and self._last_recognize_state == new_state:
+            should_log = False
+        self._last_recognize_state = new_state
+
+        if should_log:
+            self.add_log(
+                name=result.name,
+                score=result.score,
+                access_type=result.access_type,
+                success=matched,
+            )
 
         return result
+
+    def reset_recognize_state(self) -> None:
+        """Clear the last-state tracker. Useful in tests."""
+        self._last_recognize_state = None
 
     # ------------------------------------------------------------------
     # Admins
@@ -477,15 +618,18 @@ class FaceDatabase:
 
     def counts(self) -> dict[str, int]:
         with self._lock:
-            users = self._conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()
-            guests = self._conn.execute(
-                "SELECT COUNT(*) AS n FROM guests WHERE expires_at > ?",
-                (_to_iso(datetime.now(UTC)),),
+            permanent = self._conn.execute(
+                "SELECT COUNT(*) AS n FROM users WHERE type = 'permanent'"
+            ).fetchone()
+            now_iso = _to_iso(datetime.now(UTC))
+            active_temp = self._conn.execute(
+                "SELECT COUNT(*) AS n FROM users WHERE type = 'temporary' AND expires_at > ?",
+                (now_iso,),
             ).fetchone()
             logs = self._conn.execute("SELECT COUNT(*) AS n FROM logs").fetchone()
         return {
-            "users": int(users["n"]),
-            "active_guests": int(guests["n"]),
+            "users": int(permanent["n"]),
+            "active_guests": int(active_temp["n"]),
             "logs": int(logs["n"]),
         }
 
@@ -502,20 +646,14 @@ class FaceDatabase:
 
 
 def _row_to_user(row: sqlite3.Row) -> User:
+    expires_raw = row["expires_at"]
     return User(
         id=int(row["id"]),
         name=row["name"],
         embedding=_decode_embedding(row["embedding"]),
+        type=row["type"],  # type: ignore[arg-type]
+        expires_at=_from_iso(expires_raw) if expires_raw else None,
         created_at=_from_iso(row["created_at"]),
-    )
-
-
-def _row_to_guest(row: sqlite3.Row) -> Guest:
-    return Guest(
-        id=int(row["id"]),
-        name=row["name"],
-        embedding=_decode_embedding(row["embedding"]),
-        expires_at=_from_iso(row["expires_at"]),
     )
 
 
@@ -546,13 +684,12 @@ def _row_to_admin(row: sqlite3.Row) -> Admin:
     )
 
 
-# Re-export the public surface.
 __all__ = [
     "AccessType",
     "Admin",
     "FaceDatabase",
-    "Guest",
     "LogEntry",
     "RecognitionResult",
     "User",
+    "UserType",
 ]

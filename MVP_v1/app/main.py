@@ -69,6 +69,7 @@ async def lifespan(app: FastAPI):
         state=state,
         threshold=settings.threshold,
         interval_ms=settings.recognition_interval_ms,
+        log_retention_days=settings.log_retention_days,
     )
     await loop.start()
 
