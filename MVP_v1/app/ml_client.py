@@ -33,7 +33,6 @@ from dataclasses import dataclass
 import httpx
 import numpy as np
 
-
 log = logging.getLogger(__name__)
 
 
@@ -42,10 +41,9 @@ class DetectedFace:
     bbox: tuple[int, int, int, int]
     embedding: np.ndarray  # float32, (512,)
     confidence: float
-    ear: float = 0.0          
-    is_primary: bool = False       # ← НОВОЕ
+    ear: float = 0.0
+    is_primary: bool = False  # ← НОВОЕ
     liveness_passed: bool = False  # ← НОВОЕ
-  
 
 
 @dataclass(frozen=True)
@@ -129,12 +127,16 @@ class MLClient:
                 ear = float(f.get("ear", 0.0))
                 is_primary = bool(f.get("is_primary", False))
                 liveness_passed = bool(f.get("liveness_passed", False))
-                faces.append(DetectedFace(
-                    bbox, embedding, confidence,
-                    ear=ear,
-                    is_primary=is_primary,
-                    liveness_passed=liveness_passed,
-                ))
+                faces.append(
+                    DetectedFace(
+                        bbox,
+                        embedding,
+                        confidence,
+                        ear=ear,
+                        is_primary=is_primary,
+                        liveness_passed=liveness_passed,
+                    )
+                )
             except (KeyError, TypeError, ValueError) as e:
                 log.warning("Skipping malformed face entry: %s", e)
                 continue

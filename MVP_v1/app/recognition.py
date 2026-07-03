@@ -29,14 +29,17 @@ from .state import CurrentVerdict, SystemState
 
 log = logging.getLogger(__name__)
 
+
 @dataclass
 class LivenessState:
     """Current liveness check state."""
+
     is_active: bool = False
     started_at: float = 0.0
     ear_history: list = field(default_factory=list)  # list of tuples (timestamp, ear)
     last_ear_high: float = 0.0
     blink_detected: bool = False
+
 
 class RecognitionLoop:
     def __init__(
@@ -58,9 +61,9 @@ class RecognitionLoop:
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self._last_health_check: float = 0.0
-        
+
         # LIVENESS
-        self._settings = get_settings() 
+        self._settings = get_settings()
         self._liveness: LivenessState | None = None
 
     async def start(self) -> None:
@@ -84,7 +87,7 @@ class RecognitionLoop:
             except Exception:  # pragma: no cover — defensive
                 log.exception("Recognition tick crashed")
                 self._state.update(CurrentVerdict(verdict="error", name="Recognition loop crashed"))
-            
+
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._interval)
             except TimeoutError:
@@ -113,7 +116,9 @@ class RecognitionLoop:
 
         primary = next((f for f in latest.faces if f.is_primary), None)
         if primary is None:
-            primary = max(latest.faces, key=lambda f: (f.bbox[2]-f.bbox[0]) * (f.bbox[3]-f.bbox[1]))
+            primary = max(
+                latest.faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1])
+            )
 
         result = await asyncio.to_thread(
             self._db.recognize,
@@ -122,17 +127,18 @@ class RecognitionLoop:
         )
 
         if result.access_type == "unknown":
-            self._state.update(CurrentVerdict(
-                verdict="denied",
-                name=result.name,
-                score=result.score,
-                access_type="unknown",
-                liveness_status="disabled",
-                liveness_ear=primary.ear,
-            ))
+            self._state.update(
+                CurrentVerdict(
+                    verdict="denied",
+                    name=result.name,
+                    score=result.score,
+                    access_type="unknown",
+                    liveness_status="disabled",
+                    liveness_ear=primary.ear,
+                )
+            )
             return
 
-        
         if not self._settings.liveness_enabled:
             await self._grant_access(result, primary, liveness_passed=None)
             return
@@ -140,34 +146,42 @@ class RecognitionLoop:
         if primary.liveness_passed:
             await self._grant_access(result, primary, liveness_passed=True)
         else:
-            self._state.update(CurrentVerdict(
-                verdict="liveness_check",
+            self._state.update(
+                CurrentVerdict(
+                    verdict="liveness_check",
+                    name=result.name,
+                    score=result.score,
+                    access_type=result.access_type,
+                    matched_user_id=result.matched_user_id,
+                    liveness_status="checking",
+                    liveness_ear=primary.ear,
+                )
+            )
+
+    async def _grant_access(self, result, face, liveness_passed: bool | None):
+        self._state.update(
+            CurrentVerdict(
+                verdict="granted",
                 name=result.name,
                 score=result.score,
                 access_type=result.access_type,
                 matched_user_id=result.matched_user_id,
-                liveness_status="checking",
-                liveness_ear=primary.ear,
-            ))
-
-    async def _grant_access(self, result, face, liveness_passed: bool | None):
-        self._state.update(CurrentVerdict(
-            verdict="granted",
-            name=result.name,
-            score=result.score,
-            access_type=result.access_type,
-            matched_user_id=result.matched_user_id,
-            liveness_status="passed" if liveness_passed else (
-                "disabled" if liveness_passed is None else "failed"
-            ),
-            liveness_ear=face.ear,
-        ))
-        log.info("Granted: name=%s score=%.3f liveness=%s",
-            result.name, result.score, liveness_passed)
+                liveness_status="passed"
+                if liveness_passed
+                else ("disabled" if liveness_passed is None else "failed"),
+                liveness_ear=face.ear,
+            )
+        )
+        log.info(
+            "Granted: name=%s score=%.3f liveness=%s", result.name, result.score, liveness_passed
+        )
         await asyncio.to_thread(self._servo.open)
         await asyncio.to_thread(
             self._db.add_log,
-            result.name, result.score, result.access_type, True,
+            result.name,
+            result.score,
+            result.access_type,
+            True,
             liveness_passed,
         )
 

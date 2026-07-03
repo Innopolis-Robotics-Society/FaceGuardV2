@@ -110,9 +110,9 @@ async def test_tick_granted_triggers_servo():
     loop._last_health_check = 0
 
     with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_thread:
-        mock_thread.side_effect = [result, None]
+        mock_thread.side_effect = [result, None, None]
         await loop._tick()
 
     assert state.update.call_args[0][0].verdict == "granted"
     assert state.update.call_args[0][0].name == "Alice"
-    assert mock_thread.call_count == 2
+    assert mock_thread.call_count == 3
