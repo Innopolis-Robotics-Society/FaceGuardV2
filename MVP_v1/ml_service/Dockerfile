@@ -10,7 +10,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Download InsightFace models at build time
-RUN python -c "import insightface; insightface.app.FaceAnalysis(name='buffalo_l', root='./models').prepare(ctx_id=-1)"
+RUN python -c "import insightface; insightface.app.FaceAnalysis(name='buffalo_sc', root='./models').prepare(ctx_id=-1)"
 
 COPY main.py .
 

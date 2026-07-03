@@ -1,7 +1,7 @@
 """Real ML service for FaceGuardV2.
 
-Replaces ml_stub. Runs on Raspberry Pi or laptop.
-Uses InsightFace (buffalo_l) for detection + 512-dim embeddings.
+Runs on Raspberry Pi or laptop. Uses InsightFace (buffalo_sc) for
+detection + 512-dim embeddings.
 
 Issue #79 — logging cleanup:
   * uvicorn access log level set to WARNING (only errors, not every request).
@@ -22,7 +22,7 @@ import cv2
 
 # --- InsightFace ---
 import numpy as np
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from insightface.app import FaceAnalysis
 from PIL import Image, ImageDraw

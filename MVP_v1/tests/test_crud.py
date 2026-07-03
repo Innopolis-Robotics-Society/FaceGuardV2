@@ -31,78 +31,11 @@ def _rand_embedding(seed: int) -> np.ndarray:
 
 
 def test_schema_has_unified_users_table(db: FaceDatabase):
-    """Issue #76 — single users table with type column, no separate guests table."""
+    """Issue #76 — single users table with type column."""
     with db._lock:
-        tables = {
-            row["name"]
-            for row in db._conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-        }
-    assert "users" in tables
-    assert "guests" not in tables, "legacy guests table should not exist"
-
-    with db._lock:
-        cols = {
-            row["name"]
-            for row in db._conn.execute("PRAGMA table_info(users)").fetchall()
-        }
+        cols = {row["name"] for row in db._conn.execute("PRAGMA table_info(users)").fetchall()}
     assert "type" in cols
     assert "expires_at" in cols
-
-
-def test_legacy_two_tables_are_migrated(tmp_path):
-    """Pre-#76 databases with separate users + guests tables are migrated
-    automatically on startup."""
-    db_path = tmp_path / "legacy.db"
-    # Build the legacy schema by hand.
-    conn = sqlite3.connect(str(db_path))
-    conn.executescript(
-        """
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            embedding BLOB NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE guests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            embedding BLOB NOT NULL,
-            expires_at TIMESTAMP NOT NULL
-        );
-        INSERT INTO users (name, embedding) VALUES ('Alice', X'01020304');
-        INSERT INTO guests (name, embedding, expires_at)
-            VALUES ('Bob', X'05060708', '2099-01-01 00:00:00');
-        """
-    )
-    conn.commit()
-    conn.close()
-
-    # Now open with FaceDatabase — should migrate.
-    db = FaceDatabase(db_path=db_path)
-    users = db.list_users()
-    names = {u.name for u in users}
-    assert names == {"Alice", "Bob"}
-
-    alice = db.get_user_by_name("Alice")
-    assert alice.type == "permanent"
-    assert alice.expires_at is None
-
-    bob = db.get_user_by_name("Bob")
-    assert bob.type == "temporary"
-    assert bob.expires_at is not None
-
-    # Legacy guests table must be gone.
-    with db._lock:
-        tables = {
-            row["name"]
-            for row in db._conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-        }
-    assert "guests" not in tables
-    db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -120,9 +53,7 @@ def test_register_permanent_user(db: FaceDatabase):
 
 def test_register_temporary_user(db: FaceDatabase):
     expires = datetime.now(UTC) + timedelta(days=7)
-    u = db.register_user(
-        "Bob", _rand_embedding(2), type="temporary", expires_at=expires
-    )
+    u = db.register_user("Bob", _rand_embedding(2), type="temporary", expires_at=expires)
     assert u.type == "temporary"
     assert u.expires_at is not None
     assert abs((u.expires_at - expires).total_seconds()) < 5
@@ -158,7 +89,9 @@ def test_get_user_by_name(db: FaceDatabase):
 def test_list_users_all(db: FaceDatabase):
     db.register_user("Alice", _rand_embedding(1), type="permanent")
     db.register_user(
-        "Bob", _rand_embedding(2), type="temporary",
+        "Bob",
+        _rand_embedding(2),
+        type="temporary",
         expires_at=datetime.now(UTC) + timedelta(days=1),
     )
     users = db.list_users()
@@ -168,7 +101,9 @@ def test_list_users_all(db: FaceDatabase):
 def test_list_users_filter_by_type(db: FaceDatabase):
     db.register_user("Alice", _rand_embedding(1), type="permanent")
     db.register_user(
-        "Bob", _rand_embedding(2), type="temporary",
+        "Bob",
+        _rand_embedding(2),
+        type="temporary",
         expires_at=datetime.now(UTC) + timedelta(days=1),
     )
     permanent = db.list_users(type_filter="permanent")
@@ -180,7 +115,9 @@ def test_list_users_filter_by_type(db: FaceDatabase):
 def test_list_users_excludes_expired_temporary(db: FaceDatabase):
     db.register_user("Active", _rand_embedding(1), type="permanent")
     db.register_user(
-        "Expired", _rand_embedding(2), type="temporary",
+        "Expired",
+        _rand_embedding(2),
+        type="temporary",
         expires_at=datetime.now(UTC) - timedelta(hours=1),
     )
     visible = db.list_users(include_expired=False)
@@ -210,9 +147,7 @@ def test_switch_permanent_to_temporary(db: FaceDatabase):
 
 def test_switch_temporary_to_permanent_clears_expires(db: FaceDatabase):
     expires = datetime.now(UTC) + timedelta(days=3)
-    u = db.register_user(
-        "Bob", _rand_embedding(1), type="temporary", expires_at=expires
-    )
+    u = db.register_user("Bob", _rand_embedding(1), type="temporary", expires_at=expires)
     updated = db.update_user(u.id, type="permanent")
     assert updated is not None
     assert updated.type == "permanent"
@@ -255,9 +190,7 @@ def test_update_temporary_without_expires_keeps_existing(db: FaceDatabase):
     """If user is already temporary, update without expires_at should
     preserve the existing expires_at."""
     expires = datetime.now(UTC) + timedelta(days=3)
-    u = db.register_user(
-        "Bob", _rand_embedding(1), type="temporary", expires_at=expires
-    )
+    u = db.register_user("Bob", _rand_embedding(1), type="temporary", expires_at=expires)
     # Change only name — expires_at should be preserved.
     updated = db.update_user(u.id, name="Bob Smith")
     assert updated is not None
@@ -287,7 +220,9 @@ def test_list_guests_backward_compat(db: FaceDatabase):
 def test_purge_expired_purges_only_temporary(db: FaceDatabase):
     db.register_user("Alice", _rand_embedding(1), type="permanent")
     db.register_user(
-        "Bob", _rand_embedding(2), type="temporary",
+        "Bob",
+        _rand_embedding(2),
+        type="temporary",
         expires_at=datetime.now(UTC) - timedelta(hours=1),
     )
     n = db.purge_expired()
@@ -325,8 +260,13 @@ def test_purge_old_logs_default_30_days(db: FaceDatabase):
         db._conn.execute(
             "INSERT INTO logs (name, score, access_type, success, timestamp) "
             "VALUES (?, ?, ?, ?, ?)",
-            ("Bob", 0.3, "unknown", False,
-             (datetime.now(UTC) - timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")),
+            (
+                "Bob",
+                0.3,
+                "unknown",
+                False,
+                (datetime.now(UTC) - timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S"),
+            ),
         )
         db._conn.commit()
     n = db.purge_old_logs()
@@ -381,7 +321,9 @@ def test_recognize_works_with_unified_table(db: FaceDatabase):
     temp_emb = _rand_embedding(2)
     db.register_user("Alice", perm_emb, type="permanent")
     db.register_user(
-        "Bob", temp_emb, type="temporary",
+        "Bob",
+        temp_emb,
+        type="temporary",
         expires_at=datetime.now(UTC) + timedelta(days=1),
     )
 
@@ -402,7 +344,9 @@ def test_recognize_ignores_expired_temporary(db: FaceDatabase):
     """Expired temporary users are purged and not matched."""
     expired_emb = _rand_embedding(5)
     db.register_user(
-        "OldVisitor", expired_emb, type="temporary",
+        "OldVisitor",
+        expired_emb,
+        type="temporary",
         expires_at=datetime.now(UTC) - timedelta(hours=1),
     )
 

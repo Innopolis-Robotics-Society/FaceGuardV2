@@ -15,7 +15,6 @@ RUN pip install --default-timeout=300 --no-cache-dir -r requirements.txt
 
 # Application code.
 COPY app/ ./app/
-COPY ml_stub/ ./ml_stub/
 
 # Persistent data lives outside the container (mounted volume).
 RUN mkdir -p /data

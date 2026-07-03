@@ -62,9 +62,7 @@ def _parse_iso_or_400(s: str | None, field: str) -> datetime | None:
     try:
         dt = datetime.fromisoformat(s)
     except ValueError as e:
-        raise HTTPException(
-            status_code=400, detail=f"Invalid {field}: {s!r}"
-        ) from e
+        raise HTTPException(status_code=400, detail=f"Invalid {field}: {s!r}") from e
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=UTC)
     return dt
@@ -82,9 +80,7 @@ async def users_page(
     db: FaceDatabase = Depends(),
 ):
     users = db.list_users(type_filter="permanent")
-    guests = db.list_users(
-        type_filter="temporary", include_expired=False
-    )
+    guests = db.list_users(type_filter="temporary", include_expired=False)
     return templates.TemplateResponse(
         request,
         "users.html",
@@ -336,9 +332,7 @@ async def api_update_user(
 
     new_type = body.get("type")
     if new_type is not None and new_type not in ("permanent", "temporary"):
-        raise HTTPException(
-            status_code=400, detail="type must be 'permanent' or 'temporary'"
-        )
+        raise HTTPException(status_code=400, detail="type must be 'permanent' or 'temporary'")
 
     expires_raw = body.get("expires_at")
     expires_dt = _parse_iso_or_400(expires_raw, "expires_at") if expires_raw else None
@@ -358,15 +352,11 @@ async def api_update_user(
     if "embedding" in body:
         emb_list = body["embedding"]
         if not isinstance(emb_list, list) or len(emb_list) != 512:
-            raise HTTPException(
-                status_code=400, detail="embedding must be a list of 512 floats"
-            )
+            raise HTTPException(status_code=400, detail="embedding must be a list of 512 floats")
         try:
             embedding = np.asarray(emb_list, dtype=np.float32)
         except (ValueError, TypeError) as e:
-            raise HTTPException(
-                status_code=400, detail="embedding must contain floats"
-            ) from e
+            raise HTTPException(status_code=400, detail="embedding must contain floats") from e
 
     try:
         updated = db.update_user(

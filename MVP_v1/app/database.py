@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import sqlite3
 import threading
-from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -169,88 +168,13 @@ class FaceDatabase:
         self._last_recognize_state: tuple[str, str] | None = None
 
     # ------------------------------------------------------------------
-    # Lifecycle + schema migration
+    # Lifecycle + schema bootstrap
     # ------------------------------------------------------------------
 
     def _apply_schema(self) -> None:
-        # Migrate FIRST so the schema script can safely create indexes on
-        # the unified `users` table. Migration is a no-op on a fresh DB.
-        self._migrate_legacy_two_tables()
         schema_sql = Path(SCHEMA_PATH).read_text(encoding="utf-8")
         self._conn.executescript(schema_sql)
         self._conn.commit()
-
-    def _migrate_legacy_two_tables(self) -> None:
-        """Migrate from the pre-#76 schema (separate `users` and `guests`
-        tables) to the unified `users` table.
-
-        Idempotent: detects whether the legacy `guests` table exists AND
-        the `users` table is missing the `type` column. If both are true,
-        copies all rows into a new unified table and drops the old ones.
-        Safe to call on every startup.
-        """
-        with self._lock:
-            tables = {
-                row["name"]
-                for row in self._conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'"
-                ).fetchall()
-            }
-
-            if "guests" not in tables:
-                # Either fresh install or already migrated.
-                return
-
-            # Does the users table have a `type` column already?
-            cols = {
-                row["name"]
-                for row in self._conn.execute("PRAGMA table_info(users)").fetchall()
-            }
-            if "type" in cols:
-                # Already unified — just drop the legacy guests table if it
-                # somehow still exists.
-                self._conn.execute("DROP TABLE IF EXISTS guests")
-                return
-
-            # Perform the migration. We rename the old users table, create
-            # the new unified one, copy from both sources, then drop the
-            # legacy tables.
-            self._conn.execute("ALTER TABLE users RENAME TO users_legacy")
-
-            # Create the new unified users table inline (must match
-            # schema.sql exactly).
-            self._conn.execute(
-                """
-                CREATE TABLE users (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name        TEXT    UNIQUE NOT NULL,
-                    embedding   BLOB    NOT NULL,
-                    type        TEXT    NOT NULL DEFAULT 'permanent'
-                                        CHECK(type IN ('permanent', 'temporary')),
-                    expires_at  TIMESTAMP,
-                    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-                """
-            )
-
-            # Copy permanent users. IDs are NOT preserved (legacy `users`
-            # and `guests` both started at 1, so conflicts are inevitable).
-            # The audit log uses `name`, not `id`, so this is safe.
-            self._conn.execute(
-                "INSERT INTO users (name, embedding, type, expires_at, created_at) "
-                "SELECT name, embedding, 'permanent', NULL, created_at "
-                "FROM users_legacy"
-            )
-            # Copy temporary guests.
-            self._conn.execute(
-                "INSERT INTO users (name, embedding, type, expires_at, created_at) "
-                "SELECT name, embedding, 'temporary', expires_at, "
-                "       COALESCE(expires_at, CURRENT_TIMESTAMP) "
-                "FROM guests"
-            )
-            # Drop legacy tables.
-            self._conn.execute("DROP TABLE users_legacy")
-            self._conn.execute("DROP TABLE guests")
 
     def close(self) -> None:
         with self._lock:
@@ -295,8 +219,7 @@ class FaceDatabase:
         expires_iso = _to_iso(expires_at) if expires_at else None
         with self._lock:
             cur = self._conn.execute(
-                "INSERT INTO users (name, embedding, type, expires_at) "
-                "VALUES (?, ?, ?, ?)",
+                "INSERT INTO users (name, embedding, type, expires_at) VALUES (?, ?, ?, ?)",
                 (name, blob, type, expires_iso),
             )
             self._conn.commit()
@@ -304,16 +227,12 @@ class FaceDatabase:
 
     def get_user(self, user_id: int) -> User | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM users WHERE id = ?", (user_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         return _row_to_user(row) if row else None
 
     def get_user_by_name(self, name: str) -> User | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM users WHERE name = ?", (name,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM users WHERE name = ?", (name,)).fetchone()
         return _row_to_user(row) if row else None
 
     def list_users(
@@ -334,9 +253,7 @@ class FaceDatabase:
             params.append(type_filter)
         if not include_expired:
             now_iso = _to_iso(datetime.now(UTC))
-            clauses.append(
-                "(type = 'permanent' OR (type = 'temporary' AND expires_at > ?))"
-            )
+            clauses.append("(type = 'permanent' OR (type = 'temporary' AND expires_at > ?))")
             params.append(now_iso)
 
         query = "SELECT * FROM users"
@@ -410,9 +327,7 @@ class FaceDatabase:
                 elif existing.expires_at is not None:
                     new_expires = existing.expires_at
                 else:
-                    raise ValueError(
-                        "temporary user requires expires_at to be set"
-                    )
+                    raise ValueError("temporary user requires expires_at to be set")
 
             # Build the UPDATE statement.
             sets: list[str] = []
@@ -476,9 +391,7 @@ class FaceDatabase:
         embedding: np.ndarray,
         expires_at: datetime,
     ) -> User:
-        return self.register_user(
-            name, embedding, type="temporary", expires_at=expires_at
-        )
+        return self.register_user(name, embedding, type="temporary", expires_at=expires_at)
 
     def register_guest_for_days(
         self,
@@ -487,17 +400,13 @@ class FaceDatabase:
         days: int,
     ) -> User:
         expires = datetime.now(UTC) + timedelta(days=days)
-        return self.register_user(
-            name, embedding, type="temporary", expires_at=expires
-        )
+        return self.register_user(name, embedding, type="temporary", expires_at=expires)
 
     def get_guest(self, guest_id: int) -> User | None:
         return self.get_user(guest_id)
 
     def list_guests(self, include_expired: bool = False) -> list[User]:
-        return self.list_users(
-            type_filter="temporary", include_expired=include_expired
-        )
+        return self.list_users(type_filter="temporary", include_expired=include_expired)
 
     def delete_guest(self, guest_id: int) -> bool:
         return self.delete_user(guest_id)
@@ -518,8 +427,7 @@ class FaceDatabase:
     ) -> None:
         with self._lock:
             self._conn.execute(
-                "INSERT INTO logs (name, score, access_type, success) "
-                "VALUES (?, ?, ?, ?)",
+                "INSERT INTO logs (name, score, access_type, success) VALUES (?, ?, ?, ?)",
                 (name, score, access_type, bool(success)),
             )
             self._conn.commit()
@@ -614,9 +522,7 @@ class FaceDatabase:
             if score > best.score:
                 # Map the DB type to the legacy access_type for backward
                 # compatibility with the logs schema ('user' | 'guest').
-                access_type: AccessType = (
-                    "user" if row["type"] == "permanent" else "guest"
-                )
+                access_type: AccessType = "user" if row["type"] == "permanent" else "guest"
                 best = RecognitionResult(
                     name=row["name"],
                     score=score,
@@ -672,9 +578,7 @@ class FaceDatabase:
 
     def get_admin(self, admin_id: int) -> Admin | None:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT * FROM admins WHERE id = ?", (admin_id,)
-            ).fetchone()
+            row = self._conn.execute("SELECT * FROM admins WHERE id = ?", (admin_id,)).fetchone()
         return _row_to_admin(row) if row else None
 
     def get_admin_by_username(self, username: str) -> Admin | None:
@@ -686,9 +590,7 @@ class FaceDatabase:
 
     def list_admins(self) -> list[Admin]:
         with self._lock:
-            rows = self._conn.execute(
-                "SELECT * FROM admins ORDER BY username ASC"
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM admins ORDER BY username ASC").fetchall()
         return [_row_to_admin(r) for r in rows]
 
     def count_admins(self) -> int:
@@ -719,8 +621,7 @@ class FaceDatabase:
             ).fetchone()
             now_iso = _to_iso(datetime.now(UTC))
             active_temp = self._conn.execute(
-                "SELECT COUNT(*) AS n FROM users "
-                "WHERE type = 'temporary' AND expires_at > ?",
+                "SELECT COUNT(*) AS n FROM users WHERE type = 'temporary' AND expires_at > ?",
                 (now_iso,),
             ).fetchone()
             logs = self._conn.execute("SELECT COUNT(*) AS n FROM logs").fetchone()

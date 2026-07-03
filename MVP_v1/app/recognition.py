@@ -75,9 +75,7 @@ class RecognitionLoop:
         log.info("Recognition loop started (interval=%.3fs)", self._interval)
         # Initial log purge on startup (issue #79).
         try:
-            n = await asyncio.to_thread(
-                self._db.purge_old_logs, self._log_retention_days
-            )
+            n = await asyncio.to_thread(self._db.purge_old_logs, self._log_retention_days)
             if n:
                 log.info(
                     "Purged %d old log entries (>%d days)",
@@ -93,9 +91,7 @@ class RecognitionLoop:
                 await self._tick()
             except Exception:  # pragma: no cover — defensive
                 log.exception("Recognition tick crashed")
-                self._state.update(
-                    CurrentVerdict(verdict="error", name="Recognition loop crashed")
-                )
+                self._state.update(CurrentVerdict(verdict="error", name="Recognition loop crashed"))
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._interval)
             except TimeoutError:
@@ -111,17 +107,13 @@ class RecognitionLoop:
             self._last_health_check = now
             if not healthy:
                 self._log_verdict_change("error", "ML service unreachable")
-                self._state.update(
-                    CurrentVerdict(verdict="error", name="ML service unreachable")
-                )
+                self._state.update(CurrentVerdict(verdict="error", name="ML service unreachable"))
                 return
 
         # Throttled log rotation (issue #79) — once every 24h.
         if now - self._last_log_purge > 86400.0:
             try:
-                n = await asyncio.to_thread(
-                    self._db.purge_old_logs, self._log_retention_days
-                )
+                n = await asyncio.to_thread(self._db.purge_old_logs, self._log_retention_days)
                 if n:
                     log.info(
                         "Purged %d old log entries (>%d days)",
@@ -135,9 +127,7 @@ class RecognitionLoop:
         latest = await self._ml.get_latest()
         if latest is None:
             self._log_verdict_change("error", "ML returned no frame")
-            self._state.update(
-                CurrentVerdict(verdict="error", name="ML returned no frame")
-            )
+            self._state.update(CurrentVerdict(verdict="error", name="ML returned no frame"))
             return
 
         if not latest.faces:

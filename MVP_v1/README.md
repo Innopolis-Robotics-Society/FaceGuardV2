@@ -81,15 +81,15 @@ Communication:
    ```
 
    - Backend: http://localhost:8000
-   - ML stub: http://localhost:8001 (not user-facing)
+   - ML service: http://localhost:8001 (not user-facing)
    - Default login: `admin` / `change-me-on-first-login` (set in `.env`)
 
 4. **Or run without Docker** (two terminals):
 
    ```bash
-   # Terminal 1 — ML stub
-   pip install -r ml_stub/requirements.txt
-   uvicorn ml_stub.main:app --port 8001
+   # Terminal 1 — ML service
+   pip install -r ml_service/requirements.txt
+   uvicorn ml_service.main:app --port 8001
 
    # Terminal 2 — backend
    pip install -r requirements.txt
@@ -260,7 +260,6 @@ faceguard-backend/
 │   │   └── logs.py          # /api/logs JSON
 │   ├── templates/           # Jinja2
 │   └── static/              # custom.css, dashboard.js
-├── ml_stub/                 # offline dev ML service (synthetic frames)
 │   ├── main.py
 │   └── requirements.txt
 ├── tests/                   # pytest suite
@@ -311,7 +310,7 @@ pip install -r requirements.txt pytest pytest-asyncio
 pytest
 
 # Lint (optional)
-ruff check app/ ml_stub/ tests/
+ruff check app/ ml_service/ tests/
 ```
 
 ---
@@ -384,12 +383,6 @@ CREATE TABLE users (
 );
 ```
 
-**Migration:** existing DBs with the legacy two-table layout are
-auto-migrated on startup (`FaceDatabase._migrate_legacy_two_tables()`).
-IDs are NOT preserved (legacy `users` and `guests` both started at 1,
-so conflicts are inevitable) — but the audit log uses `name`, not `id`,
-so traceability is preserved.
-
 **New DB methods:**
 - `register_user(name, embedding, type='permanent', expires_at=None)`
 - `update_user(user_id, *, name=None, type=None, expires_at=None, embedding=None)`
@@ -435,7 +428,7 @@ Form submissions go to `POST /users/{id}/update` which forwards to
 
 ### Issue #79 — Logging cleanup
 
-**ML service (`ml_service/main.py` + `ml_stub/main.py`):**
+**ML service (`ml_service/main.py`):**
 - uvicorn `--log-level warning` (set both in code and Dockerfiles).
 - Custom `_HealthFilter` removes `GET /health` lines from the access log.
 
