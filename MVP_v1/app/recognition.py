@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class LivenessState:
     """Current liveness check state."""
+
     is_active: bool = False
     started_at: float = 0.0
     ear_history: list = field(default_factory=list)  # list of tuples (timestamp, ear)
@@ -64,13 +65,13 @@ class RecognitionLoop:
         self._last_health_check: float = 0.0
         self._last_log_purge: float = time.time()
         self._log_retention_days = log_retention_days
-        
+
         # Last Python-log verdict — only log changes (issue #79).
         self._last_logged_verdict: str | None = None
-        
+
         # LIVENESS CONFIG
         self._settings = get_settings()
-        # Note: Full liveness state management might need to be in SystemState 
+        # Note: Full liveness state management might need to be in SystemState
         # if it persists across ticks, but for simple check per frame, local logic works.
 
     async def start(self) -> None:
@@ -88,7 +89,7 @@ class RecognitionLoop:
 
     async def _run(self) -> None:
         log.info("Recognition loop started (interval=%.3fs)", self._interval)
-        
+
         # Initial log purge on startup (issue #79).
         try:
             n = await asyncio.to_thread(self._db.purge_old_logs, self._log_retention_days)
@@ -104,7 +105,7 @@ class RecognitionLoop:
             except Exception:  # pragma: no cover — defensive
                 log.exception("Recognition tick crashed")
                 self._state.update(CurrentVerdict(verdict="error", name="Recognition loop crashed"))
-            
+
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._interval)
             except TimeoutError:
@@ -113,7 +114,7 @@ class RecognitionLoop:
 
     async def _tick(self) -> None:
         now = time.time()
-        
+
         # Throttled ML health check.
         if now - self._last_health_check > 30.0:
             healthy = await self._ml.health()
@@ -149,8 +150,7 @@ class RecognitionLoop:
         primary = next((f for f in latest.faces if f.is_primary), None)
         if primary is None:
             primary = max(
-                latest.faces, 
-                key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1])
+                latest.faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1])
             )
 
         result = await asyncio.to_thread(
@@ -172,7 +172,7 @@ class RecognitionLoop:
                     access_type="unknown",
                     timestamp=time.time(),
                     # Pass liveness info if available from ML model
-                    liveness_status="disabled", 
+                    liveness_status="disabled",
                     liveness_ear=primary.ear,
                 )
             )
@@ -184,7 +184,7 @@ class RecognitionLoop:
             return
 
         # Check if ML model already provided liveness result
-        if hasattr(primary, 'liveness_passed'):
+        if hasattr(primary, "liveness_passed"):
             if primary.liveness_passed:
                 await self._grant_access(result, primary, liveness_passed=True)
             else:
@@ -196,7 +196,7 @@ class RecognitionLoop:
                         score=result.score,
                         access_type=result.access_type,
                         matched_user_id=result.matched_user_id,
-                        liveness_status="checking", # or "failed" depending on your protocol
+                        liveness_status="checking",  # or "failed" depending on your protocol
                         liveness_ear=primary.ear,
                     )
                 )
@@ -206,13 +206,15 @@ class RecognitionLoop:
         # --- LIVENESS LOGIC END ---
 
     async def _grant_access(self, result, face, liveness_passed: bool | None):
-        status_msg = "passed" if liveness_passed else ("disabled" if liveness_passed is None else "failed")
-        
+        status_msg = (
+            "passed" if liveness_passed else ("disabled" if liveness_passed is None else "failed")
+        )
+
         self._log_verdict_change(
             "granted",
             f"name={result.name} type={result.access_type} score={result.score:.3f} liveness={status_msg}",
         )
-        
+
         self._state.update(
             CurrentVerdict(
                 verdict="granted",
@@ -225,7 +227,7 @@ class RecognitionLoop:
                 timestamp=time.time(),
             )
         )
-        
+
         log.info("Granted: name=%s score=%.3f liveness=%s", result.name, result.score, status_msg)
         await asyncio.to_thread(self._servo.open)
         await asyncio.to_thread(
