@@ -28,6 +28,7 @@ async def list_logs(
                 "access_type": e.access_type,
                 "success": e.success,
                 "timestamp": e.timestamp.isoformat(),
+                "liveness_passed": e.liveness_passed,
             }
             for e in entries
         ]
