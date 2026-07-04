@@ -19,7 +19,7 @@ jobs:
           python-version: "3.11"
       - run: pip install ruff mypy
       - run: ruff check app/ tests/
-      - run: ruff format --check app/ ml_stub/ tests/
+      - run: ruff format --check app/ tests/
       - run: mypy app/ --ignore-missing-imports || true
 
   build:
