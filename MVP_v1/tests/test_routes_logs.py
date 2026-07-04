@@ -47,16 +47,11 @@ def test_logs_returns_entries_list_when_empty(client):
 @pytest.mark.integration
 def test_log_entry_schema(client):
     """Each log entry must have the documented fields."""
-    import numpy as np
+    import os
 
-    from app.config import Settings
     from app.database import FaceDatabase
 
     _login(client)
-
-    # Seed one log entry directly via DB
-    settings = Settings(SERVO_OPEN_DURATION_SEC=0.1)
-    import os
 
     db = FaceDatabase(db_path=os.environ["DATABASE_PATH"])
     db.add_log("Alice", 0.91, "user", True)
@@ -68,8 +63,11 @@ def test_log_entry_schema(client):
     assert len(entries) >= 1
 
     entry = entries[0]
-    for field in ("id", "name", "score", "access_type", "success", "timestamp"):
-        assert field in entry, f"Missing field: {field}"
+    assert entry["name"] == "Alice"
+    assert entry["access_type"] == "user"
+    assert isinstance(entry["score"], float)
+    assert entry["success"] is True
+    assert "timestamp" in entry
 
 
 # ---------------------------------------------------------------------------
