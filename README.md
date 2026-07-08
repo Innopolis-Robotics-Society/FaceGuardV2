@@ -9,8 +9,6 @@ FaceGuardV2 is a face-recognition access-control system for a laboratory door. I
 * **Current maintained documentation:** [docs/](docs/)
 * **Current handover guidance:** [docs/customer-handover.md](docs/customer-handover.md)
 
-> For private deployment credentials, customer-specific access details, or instructor-only evidence, use the private Moodle submission channel. Do not commit private credentials or customer-identifying information to this repository.
-
 ## Product status
 
 The current course version is focused on a customer-usable access-control prototype:
