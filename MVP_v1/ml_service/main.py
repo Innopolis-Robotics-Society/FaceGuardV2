@@ -1,4 +1,4 @@
-"""Optimized ML service for FaceGuard with Passive Liveness."""
+"""Optimized ML service for FaceGuard with Passive Liveness + FPS overlay."""
 
 from __future__ import annotations
 
@@ -25,6 +25,12 @@ _frame_lock = threading.Lock()
 latest_frame: bytes | None = None
 latest_result = {"timestamp": "", "faces": []}
 
+# --- FPS Globals (thread-safe via _fps_lock) ---
+_fps_lock = threading.Lock()
+_fps_capture = 0.0
+_fps_stream = 0.0
+_fps_inference = 0.0
+
 # --- Passive Liveness Config ---
 EAR_THRESHOLD = 0.22
 CONSECUTIVE_FRAMES = 2
@@ -50,6 +56,15 @@ display_queue = queue.Queue(maxsize=2)
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _update_fps(window: list[float], now: float) -> float:
+    """Keep only last-second timestamps, return count."""
+    window.append(now)
+    cutoff = now - 1.0
+    while window and window[0] < cutoff:
+        window.pop(0)
+    return len(window)
 
 
 def init_model():
@@ -132,7 +147,6 @@ def run_inference(frame: np.ndarray) -> dict:
     primary = faces[0]
     bbox = primary.bbox.astype(int)
 
-    # MediaPipe только когда есть лицо — экономим CPU
     mp_results = mp_face_mesh.process(rgb_frame)
     landmarks = None
     if mp_results.multi_face_landmarks:
@@ -180,7 +194,7 @@ def run_inference(frame: np.ndarray) -> dict:
 
 
 def draw_frame(frame: np.ndarray) -> bytes | None:
-    """Быстрая отрисовка кэшированных результатов через OpenCV."""
+    """Быстрая отрисовка кэшированных результатов + FPS overlay."""
     display = frame.copy()
 
     with _inference_lock:
@@ -188,6 +202,9 @@ def draw_frame(frame: np.ndarray) -> bytes | None:
         landmarks = cached_landmarks
         status_text, color = cached_status
 
+    h, w, _ = display.shape
+
+    # --- Draw face box & status ---
     if faces:
         primary = faces[0]
         bbox = primary.bbox.astype(int)
@@ -216,12 +233,33 @@ def draw_frame(frame: np.ndarray) -> bytes | None:
                 1,
             )
 
+    # --- FPS Overlay (top-left, black background for readability) ---
+    with _fps_lock:
+        cap_fps = _fps_capture
+        str_fps = _fps_stream
+        inf_fps = _fps_inference
+
+    fps_text = f"CAP:{cap_fps:2d} INF:{inf_fps:2d} STR:{str_fps:2d}"
+    (tw, th), _ = cv2.getTextSize(fps_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+    cv2.rectangle(display, (5, 5), (10 + tw, 10 + th), (0, 0, 0), -1)
+    cv2.putText(
+        display,
+        fps_text,
+        (8, 8 + th),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0, 255, 0),
+        2,
+    )
+
     ret, buf = cv2.imencode(".jpg", display, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
     return buf.tobytes() if ret else None
 
 
 def capture_thread():
     """Захват 30 FPS. Если обработка не успевает — выбрасываем старые кадры."""
+    global _fps_capture
+
     cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -231,6 +269,8 @@ def capture_thread():
     if not cap.isOpened():
         raise RuntimeError("Cannot open camera")
 
+    fps_window: list[float] = []
+
     while True:
         ret, frame = cap.read()
         if not ret or frame is None:
@@ -239,6 +279,11 @@ def capture_thread():
 
         if frame.shape[0] < 100 or frame.shape[1] < 100:
             continue
+
+        now = time.time()
+        fps = _update_fps(fps_window, now)
+        with _fps_lock:
+            _fps_capture = fps
 
         try:
             capture_queue.put_nowait(frame)
@@ -267,20 +312,38 @@ def capture_thread():
 
 def inference_thread():
     """Фоновый поток тяжёлого инференса."""
-    global latest_result
+    global latest_result, _fps_inference
+
+    fps_window: list[float] = []
+
     while True:
         frame = capture_queue.get()
+        now = time.time()
         result = run_inference(frame)
+
+        fps = _update_fps(fps_window, now)
+        with _fps_lock:
+            _fps_inference = fps
+
         with _frame_lock:
             latest_result = result
 
 
 def stream_thread():
     """Быстрый поток кодирования видео. Даёт 30 FPS независимо от нейросети."""
-    global latest_frame
+    global latest_frame, _fps_stream
+
+    fps_window: list[float] = []
+
     while True:
         frame = display_queue.get()
+        now = time.time()
         jpeg = draw_frame(frame)
+
+        fps = _update_fps(fps_window, now)
+        with _fps_lock:
+            _fps_stream = fps
+
         if jpeg is not None:
             with _frame_lock:
                 latest_frame = jpeg
@@ -303,7 +366,7 @@ async def lifespan(app: FastAPI):
         mp_face_mesh.close()
 
 
-app = FastAPI(title="FaceGuard ML Service", version="2.2.0", lifespan=lifespan)
+app = FastAPI(title="FaceGuard ML Service", version="2.3.0", lifespan=lifespan)
 
 
 @app.get("/health")
