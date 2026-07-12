@@ -1,6 +1,14 @@
-"""Optimized ML service for FaceGuard with Passive Liveness + FPS overlay."""
+"""Optimized ML service for FaceGuard — draw on original, then resize."""
 
 from __future__ import annotations
+
+import os
+os.environ["OMP_NUM_THREADS"] = "2"
+os.environ["OPENBLAS_NUM_THREADS"] = "2"
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "2"
+os.environ["NUMEXPR_NUM_THREADS"] = "2"
+os.environ["ONNXRUNTIME_CPU_NUM_THREADS"] = "2"
 
 import asyncio
 import queue
@@ -25,13 +33,13 @@ _frame_lock = threading.Lock()
 latest_frame: bytes | None = None
 latest_result = {"timestamp": "", "faces": []}
 
-# --- FPS Globals (thread-safe via _fps_lock) ---
+# --- FPS Globals ---
 _fps_lock = threading.Lock()
-_fps_capture = 0.0
-_fps_stream = 0.0
-_fps_inference = 0.0
+_fps_capture = 0
+_fps_stream = 0
+_fps_inference = 0
 
-# --- Passive Liveness Config ---
+# --- Passive Liveness ---
 EAR_THRESHOLD = 0.22
 CONSECUTIVE_FRAMES = 2
 LIVENESS_TTL_SECONDS = 3.0
@@ -43,7 +51,7 @@ liveness_valid_until = 0.0
 RIGHT_EYE_IDX = [362, 385, 387, 263, 373, 380]
 LEFT_EYE_IDX = [33, 160, 158, 133, 153, 144]
 
-# --- Cached inference results ---
+# --- Cached inference ---
 _inference_lock = threading.Lock()
 cached_faces = []
 cached_landmarks = None
@@ -53,13 +61,16 @@ cached_status = ("NO FACE", (128, 128, 128))
 capture_queue = queue.Queue(maxsize=1)
 display_queue = queue.Queue(maxsize=2)
 
+# --- Stream output size ---
+STREAM_W, STREAM_H = 240, 180
+STREAM_QUALITY = 40
+
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _update_fps(window: list[float], now: float) -> float:
-    """Keep only last-second timestamps, return count."""
+def _update_fps(window: list[float], now: float) -> int:
     window.append(now)
     cutoff = now - 1.0
     while window and window[0] < cutoff:
@@ -68,7 +79,6 @@ def _update_fps(window: list[float], now: float) -> float:
 
 
 def init_model():
-    """Load InsightFace and MediaPipe models once at startup."""
     global face_app, mp_face_mesh
 
     face_app = FaceAnalysis(name="buffalo_sc", root="./models")
@@ -77,35 +87,29 @@ def init_model():
     mp_face_mesh_module = mp.solutions.face_mesh
     mp_face_mesh = mp_face_mesh_module.FaceMesh(
         max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
+        refine_landmarks=False,
+        min_detection_confidence=0.7,
+        min_tracking_confidence=0.7,
     )
 
 
 def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
-    """Eye Aspect Ratio calculation."""
     if landmarks is None or len(landmarks) < max(eye_idx) + 1:
         return 0.0
-
     pts = landmarks[eye_idx]
     v1 = np.linalg.norm(pts[1] - pts[5])
     v2 = np.linalg.norm(pts[2] - pts[4])
     h = np.linalg.norm(pts[0] - pts[3])
-
     if h < 1e-6:
         return 0.0
     return float((v1 + v2) / (2.0 * h))
 
 
 def _detect_blink(history: deque[tuple[float, float]]) -> bool:
-    """Пассивный поиск моргания в истории EAR."""
     if len(history) < 6:
         return False
-
     state = "open"
     closed_count = 0
-
     for _, ear in history:
         if state == "open":
             if ear < EAR_THRESHOLD:
@@ -126,7 +130,6 @@ def _detect_blink(history: deque[tuple[float, float]]) -> bool:
 
 
 def run_inference(frame: np.ndarray) -> dict:
-    """Тяжёлый инференс: InsightFace + MediaPipe. Работает в фоновом потоке."""
     global liveness_valid_until, cached_faces, cached_landmarks, cached_status
 
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -161,13 +164,10 @@ def run_inference(frame: np.ndarray) -> dict:
         ear_left = _calculate_ear(landmarks, LEFT_EYE_IDX)
         ear_right = _calculate_ear(landmarks, RIGHT_EYE_IDX)
         ear_avg = (ear_left + ear_right) / 2.0
-
         ear_history.append((current_time, ear_avg))
-
         if _detect_blink(ear_history):
             liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
             is_live = True
-
         is_live = current_time < liveness_valid_until
 
     status_text = "ACCESS GRANTED" if is_live else "LOCKED"
@@ -193,74 +193,57 @@ def run_inference(frame: np.ndarray) -> dict:
     return {"timestamp": _now_iso(), "faces": face_data, "status": status_text}
 
 
-def draw_frame(frame: np.ndarray) -> bytes | None:
-    """Быстрая отрисовка кэшированных результатов + FPS overlay по центру."""
+def draw_frame(frame: np.ndarray) -> np.ndarray:
+    """Рисует оверлей на ОРИГИНАЛЬНОМ кадре. Bbox совпадает идеально."""
     display = frame.copy()
+    h, w, _ = display.shape
 
     with _inference_lock:
         faces = cached_faces
         landmarks = cached_landmarks
         status_text, color = cached_status
 
-    h, w, _ = display.shape
-
-    # --- FPS Overlay (центрирован сверху) ---
+    # --- FPS overlay по центру ---
     with _fps_lock:
-        cap_fps = int(_fps_capture)
-        str_fps = int(_fps_stream)
-        inf_fps = int(_fps_inference)
+        cap_fps = _fps_capture
+        str_fps = _fps_stream
+        inf_fps = _fps_inference
 
-    line1 = f"CAP:{cap_fps}  INF:{inf_fps}  STR:{str_fps}"
+    line = f"CAP:{cap_fps}  INF:{inf_fps}  STR:{str_fps}"
     font = cv2.FONT_HERSHEY_SIMPLEX
-    scale = 0.55
-    thickness = 2
+    fscale = 0.5
+    thick = 1
+    (tw, th), _ = cv2.getTextSize(line, font, fscale, thick)
+    x = max((w - tw) // 2, 0)
+    y = th + 6
+    cv2.rectangle(display, (x - 4, 0), (x + tw + 4, y + 4), (0, 0, 0), -1)
+    cv2.putText(display, line, (x, y), font, fscale, (0, 255, 0), thick)
 
-    (tw, th), _ = cv2.getTextSize(line1, font, scale, thickness)
-    x = (w - tw) // 2          # центр по горизонтали
-    y = th + 8                 # отступ сверху
-
-    # Чёрный полупрозрачный фон под текст
-    cv2.rectangle(display, (x - 6, 0), (x + tw + 6, y + 6), (0, 0, 0), -1)
-
-    # Зелёный текст
-    cv2.putText(display, line1, (x, y), font, scale, (0, 255, 0), thickness)
-
-    # --- Draw face box & status ---
+    # --- Face box & status (оригинальные координаты — никакого scale!) ---
     if faces:
         primary = faces[0]
         bbox = primary.bbox.astype(int)
         cv2.rectangle(display, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
         cv2.putText(
-            display,
-            status_text,
-            (bbox[0], bbox[1] - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            color,
-            2,
+            display, status_text,
+            (bbox[0], max(bbox[1] - 10, y + 10)),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2,
         )
-
         if landmarks is not None:
             ear_left = _calculate_ear(landmarks, LEFT_EYE_IDX)
             ear_right = _calculate_ear(landmarks, RIGHT_EYE_IDX)
             ear_avg = (ear_left + ear_right) / 2.0
             cv2.putText(
-                display,
-                f"EAR:{ear_avg:.2f}",
+                display, f"EAR:{ear_avg:.2f}",
                 (bbox[0], bbox[1] + 20),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 255, 255),
-                1,
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1,
             )
 
-    ret, buf = cv2.imencode(".jpg", display, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-    return buf.tobytes() if ret else None
+    return display
+
 
 def capture_thread():
-    """Захват 30 FPS. Если обработка не успевает — выбрасываем старые кадры."""
     global _fps_capture
-
     cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -271,20 +254,23 @@ def capture_thread():
         raise RuntimeError("Cannot open camera")
 
     fps_window: list[float] = []
+    first = True
 
     while True:
         ret, frame = cap.read()
         if not ret or frame is None:
             time.sleep(0.001)
             continue
-
         if frame.shape[0] < 100 or frame.shape[1] < 100:
             continue
 
+        if first:
+            print(f"[CAP] Real camera resolution: {frame.shape[1]}x{frame.shape[0]}", flush=True)
+            first = False
+
         now = time.time()
-        fps = _update_fps(fps_window, now)
         with _fps_lock:
-            _fps_capture = fps
+            _fps_capture = _update_fps(fps_window, now)
 
         try:
             capture_queue.put_nowait(frame)
@@ -312,38 +298,43 @@ def capture_thread():
 
 
 def inference_thread():
-    """Фоновый поток тяжёлого инференса."""
     global latest_result, _fps_inference
-
     fps_window: list[float] = []
 
     while True:
         frame = capture_queue.get()
         now = time.time()
-        result = run_inference(frame)
 
-        fps = _update_fps(fps_window, now)
+        try:
+            result = run_inference(frame)
+        except Exception as e:
+            print(f"[INFERENCE ERROR] {e}", flush=True)
+            result = {"timestamp": _now_iso(), "faces": [], "status": "ERROR"}
+
         with _fps_lock:
-            _fps_inference = fps
-
+            _fps_inference = _update_fps(fps_window, now)
         with _frame_lock:
             latest_result = result
 
 
 def stream_thread():
-    """Быстрый поток кодирования видео. Даёт 30 FPS независимо от нейросети."""
     global latest_frame, _fps_stream
-
     fps_window: list[float] = []
 
     while True:
         frame = display_queue.get()
         now = time.time()
-        jpeg = draw_frame(frame)
 
-        fps = _update_fps(fps_window, now)
+        # Рисуем на оригинале — bbox точно по лицу
+        display = draw_frame(frame)
+        # Потом уменьшаем ВСЁ изображение пропорционально
+        small = cv2.resize(display, (STREAM_W, STREAM_H))
+        # Кодируем
+        ret, buf = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), STREAM_QUALITY])
+        jpeg = buf.tobytes() if ret else None
+
         with _fps_lock:
-            _fps_stream = fps
+            _fps_stream = _update_fps(fps_window, now)
 
         if jpeg is not None:
             with _frame_lock:
@@ -352,22 +343,18 @@ def stream_thread():
 
 # --- FastAPI ---
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_model()
-    t_cap = threading.Thread(target=capture_thread, daemon=True, name="capture")
-    t_inf = threading.Thread(target=inference_thread, daemon=True, name="inference")
-    t_str = threading.Thread(target=stream_thread, daemon=True, name="stream")
-    t_cap.start()
-    t_inf.start()
-    t_str.start()
+    threading.Thread(target=capture_thread, daemon=True, name="capture").start()
+    threading.Thread(target=inference_thread, daemon=True, name="inference").start()
+    threading.Thread(target=stream_thread, daemon=True, name="stream").start()
     yield
     if mp_face_mesh:
         mp_face_mesh.close()
 
 
-app = FastAPI(title="FaceGuard ML Service", version="2.3.0", lifespan=lifespan)
+app = FastAPI(title="FaceGuard ML Service", version="2.5.3", lifespan=lifespan)
 
 
 @app.get("/health")
@@ -405,5 +392,4 @@ async def ml_stream():
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run("main:app", host="0.0.0.0", port=8001)
