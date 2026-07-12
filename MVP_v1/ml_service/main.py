@@ -194,7 +194,7 @@ def run_inference(frame: np.ndarray) -> dict:
 
 
 def draw_frame(frame: np.ndarray) -> bytes | None:
-    """Быстрая отрисовка кэшированных результатов + FPS overlay."""
+    """Быстрая отрисовка кэшированных результатов + FPS overlay по центру."""
     display = frame.copy()
 
     with _inference_lock:
@@ -203,6 +203,27 @@ def draw_frame(frame: np.ndarray) -> bytes | None:
         status_text, color = cached_status
 
     h, w, _ = display.shape
+
+    # --- FPS Overlay (центрирован сверху) ---
+    with _fps_lock:
+        cap_fps = int(_fps_capture)
+        str_fps = int(_fps_stream)
+        inf_fps = int(_fps_inference)
+
+    line1 = f"CAP:{cap_fps}  INF:{inf_fps}  STR:{str_fps}"
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    scale = 0.55
+    thickness = 2
+
+    (tw, th), _ = cv2.getTextSize(line1, font, scale, thickness)
+    x = (w - tw) // 2          # центр по горизонтали
+    y = th + 8                 # отступ сверху
+
+    # Чёрный полупрозрачный фон под текст
+    cv2.rectangle(display, (x - 6, 0), (x + tw + 6, y + 6), (0, 0, 0), -1)
+
+    # Зелёный текст
+    cv2.putText(display, line1, (x, y), font, scale, (0, 255, 0), thickness)
 
     # --- Draw face box & status ---
     if faces:
@@ -225,7 +246,7 @@ def draw_frame(frame: np.ndarray) -> bytes | None:
             ear_avg = (ear_left + ear_right) / 2.0
             cv2.putText(
                 display,
-                f"EAR: {ear_avg:.2f}",
+                f"EAR:{ear_avg:.2f}",
                 (bbox[0], bbox[1] + 20),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
@@ -233,28 +254,8 @@ def draw_frame(frame: np.ndarray) -> bytes | None:
                 1,
             )
 
-    # --- FPS Overlay (top-left, black background for readability) ---
-    with _fps_lock:
-        cap_fps = _fps_capture
-        str_fps = _fps_stream
-        inf_fps = _fps_inference
-
-    fps_text = f"CAP:{cap_fps:2d} INF:{inf_fps:2d} STR:{str_fps:2d}"
-    (tw, th), _ = cv2.getTextSize(fps_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-    cv2.rectangle(display, (5, 5), (10 + tw, 10 + th), (0, 0, 0), -1)
-    cv2.putText(
-        display,
-        fps_text,
-        (8, 8 + th),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.5,
-        (0, 255, 0),
-        2,
-    )
-
     ret, buf = cv2.imencode(".jpg", display, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
     return buf.tobytes() if ret else None
-
 
 def capture_thread():
     """Захват 30 FPS. Если обработка не успевает — выбрасываем старые кадры."""
