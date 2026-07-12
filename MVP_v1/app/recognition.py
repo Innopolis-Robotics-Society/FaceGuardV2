@@ -142,7 +142,7 @@ class RecognitionLoop:
             )
             return
 
-        # --- ПАССИВНАЯ ПРОВЕРКА ЖИВОСТИ ---
+        # --- PASSIVE LIVENESS CHECK ---
         if not self._settings.liveness_enabled:
             await self._grant_access(result, primary, liveness_passed=None)
             return
@@ -150,7 +150,7 @@ class RecognitionLoop:
         if primary.liveness_passed:
             await self._grant_access(result, primary, liveness_passed=True)
         else:
-            # Ждём естественного моргания — никаких таймеров
+            # Wait for natural blink — no timers
             self._state.update(
                 CurrentVerdict(
                     verdict="liveness_check",

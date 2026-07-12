@@ -39,11 +39,14 @@ _fps_capture = 0
 _fps_stream = 0
 _fps_inference = 0
 
-# --- Passive Liveness ---
-EAR_THRESHOLD = 0.22
-CONSECUTIVE_FRAMES = 2
-LIVENESS_TTL_SECONDS = 3.0
-MAX_EAR_HISTORY = 45
+# --- Passive Liveness Config ---
+EAR_THRESHOLD = 0.17
+CONSECUTIVE_FRAMES = 3
+MIN_OPEN_FRAMES = 5
+REQUIRED_BLINKS = 2
+BLINK_WINDOW = 3.0
+LIVENESS_TTL_SECONDS = 2.0
+MAX_EAR_HISTORY = 75
 
 ear_history: deque[tuple[float, float]] = deque(maxlen=MAX_EAR_HISTORY)
 liveness_valid_until = 0.0
@@ -105,28 +108,35 @@ def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
     return float((v1 + v2) / (2.0 * h))
 
 
-def _detect_blink(history: deque[tuple[float, float]]) -> bool:
-    if len(history) < 6:
-        return False
-    state = "open"
-    closed_count = 0
-    for _, ear in history:
-        if state == "open":
-            if ear < EAR_THRESHOLD:
-                state = "closing"
-                closed_count = 1
-        elif state == "closing":
-            if ear < EAR_THRESHOLD:
-                closed_count += 1
-                if closed_count >= CONSECUTIVE_FRAMES:
-                    state = "closed"
-            else:
-                state = "open"
-                closed_count = 0
-        elif state == "closed":
-            if ear >= EAR_THRESHOLD:
-                return True
-    return False
+def _count_blinks(history: deque[tuple[float, float]], now: float) -> int:
+    recent = [(t, e) for t, e in history if now - t <= BLINK_WINDOW]
+    if len(recent) < 10:
+        return 0
+
+    blinks = 0
+    i = 0
+    while i < len(recent):
+        open_start = i
+        while i < len(recent) and recent[i][1] >= EAR_THRESHOLD:
+            i += 1
+        open_len = i - open_start
+
+        if open_len < MIN_OPEN_FRAMES:
+            i += 1
+            continue
+
+        closed_start = i
+        while i < len(recent) and recent[i][1] < EAR_THRESHOLD:
+            i += 1
+        closed_len = i - closed_start
+
+        if closed_len < CONSECUTIVE_FRAMES:
+            continue
+
+        if i < len(recent) and recent[i][1] >= EAR_THRESHOLD:
+            blinks += 1
+
+    return blinks
 
 
 def run_inference(frame: np.ndarray) -> dict:
@@ -165,9 +175,15 @@ def run_inference(frame: np.ndarray) -> dict:
         ear_right = _calculate_ear(landmarks, RIGHT_EYE_IDX)
         ear_avg = (ear_left + ear_right) / 2.0
         ear_history.append((current_time, ear_avg))
-        if _detect_blink(ear_history):
+
+        while ear_history and current_time - ear_history[0][0] > 5.0:
+            ear_history.popleft()
+
+        blink_count = _count_blinks(ear_history, current_time)
+        if blink_count >= REQUIRED_BLINKS:
             liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
             is_live = True
+
         is_live = current_time < liveness_valid_until
 
     status_text = "ACCESS GRANTED" if is_live else "LOCKED"
@@ -194,7 +210,6 @@ def run_inference(frame: np.ndarray) -> dict:
 
 
 def draw_frame(frame: np.ndarray) -> np.ndarray:
-    """Рисует оверлей на ОРИГИНАЛЬНОМ кадре. Bbox совпадает идеально."""
     display = frame.copy()
     h, w, _ = display.shape
 
@@ -203,7 +218,6 @@ def draw_frame(frame: np.ndarray) -> np.ndarray:
         landmarks = cached_landmarks
         status_text, color = cached_status
 
-    # --- FPS overlay по центру ---
     with _fps_lock:
         cap_fps = _fps_capture
         str_fps = _fps_stream
@@ -219,7 +233,6 @@ def draw_frame(frame: np.ndarray) -> np.ndarray:
     cv2.rectangle(display, (x - 4, 0), (x + tw + 4, y + 4), (0, 0, 0), -1)
     cv2.putText(display, line, (x, y), font, fscale, (0, 255, 0), thick)
 
-    # --- Face box & status (оригинальные координаты — никакого scale!) ---
     if faces:
         primary = faces[0]
         bbox = primary.bbox.astype(int)
@@ -325,11 +338,8 @@ def stream_thread():
         frame = display_queue.get()
         now = time.time()
 
-        # Рисуем на оригинале — bbox точно по лицу
         display = draw_frame(frame)
-        # Потом уменьшаем ВСЁ изображение пропорционально
         small = cv2.resize(display, (STREAM_W, STREAM_H))
-        # Кодируем
         ret, buf = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), STREAM_QUALITY])
         jpeg = buf.tobytes() if ret else None
 
@@ -354,7 +364,7 @@ async def lifespan(app: FastAPI):
         mp_face_mesh.close()
 
 
-app = FastAPI(title="FaceGuard ML Service", version="2.5.3", lifespan=lifespan)
+app = FastAPI(title="FaceGuard ML Service", version="2.6.0", lifespan=lifespan)
 
 
 @app.get("/health")
