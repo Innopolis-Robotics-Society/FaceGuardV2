@@ -84,7 +84,7 @@ the way for the future work is declared above in the Customer Feedback Response 
 # Links
 [SemVer trial release]()  
 [CHANGELOG.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/CHANGELOG.md)  
-[reports/week6/sprint-review-transcript.md]()  
+[reports/week6/sprint-review-transcript.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/tree/main/reports/week6/sprint-review-transcript.md)  
 [reports/week6/reflection.md]()  
 [reports/week6/retrospective.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week6/retrospective.md)  
 [reports/week6/llm-report.md]()  
