@@ -1,24 +1,10 @@
-"""Background recognition loop.
-
-Every `RECOGNITION_INTERVAL_MS`:
-  1. Poll ML service for the latest annotated frame.
-  2. If no face -> set verdict to "idle".
-  3. If face -> take the biggest, run `db.recognize(embedding, threshold)`.
-     * match   -> check liveness (if enabled) -> verdict "granted" or "liveness_check".
-     * no match -> verdict "denied".
-  4. Periodically health-check ML and purge old logs.
-
-Changes:
-  - Issue #79: Python-level logging is now state-transition only.
-  - Merged Liveness Detection logic from main branch.
-"""
+"""Background recognition loop — OPTIMIZED with Passive Liveness."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -29,17 +15,6 @@ from .servo import Servo
 from .state import CurrentVerdict, SystemState
 
 log = logging.getLogger(__name__)
-
-
-@dataclass
-class LivenessState:
-    """Current liveness check state."""
-
-    is_active: bool = False
-    started_at: float = 0.0
-    ear_history: list = field(default_factory=list)  # list of tuples (timestamp, ear)
-    last_ear_high: float = 0.0
-    blink_detected: bool = False
 
 
 class RecognitionLoop:
@@ -65,14 +40,8 @@ class RecognitionLoop:
         self._last_health_check: float = 0.0
         self._last_log_purge: float = time.time()
         self._log_retention_days = log_retention_days
-
-        # Last Python-log verdict — only log changes (issue #79).
         self._last_logged_verdict: str | None = None
-
-        # LIVENESS CONFIG
         self._settings = get_settings()
-        # Note: Full liveness state management might need to be in SystemState
-        # if it persists across ticks, but for simple check per frame, local logic works.
 
     async def start(self) -> None:
         if self._task is None or self._task.done():
@@ -90,7 +59,6 @@ class RecognitionLoop:
     async def _run(self) -> None:
         log.info("Recognition loop started (interval=%.3fs)", self._interval)
 
-        # Initial log purge on startup (issue #79).
         try:
             n = await asyncio.to_thread(self._db.purge_old_logs, self._log_retention_days)
             if n:
@@ -102,7 +70,7 @@ class RecognitionLoop:
         while not self._stop.is_set():
             try:
                 await self._tick()
-            except Exception:  # pragma: no cover — defensive
+            except Exception:
                 log.exception("Recognition tick crashed")
                 self._state.update(CurrentVerdict(verdict="error", name="Recognition loop crashed"))
 
@@ -115,7 +83,6 @@ class RecognitionLoop:
     async def _tick(self) -> None:
         now = time.time()
 
-        # Throttled ML health check.
         if now - self._last_health_check > 30.0:
             healthy = await self._ml.health()
             self._state.set_ml_health(healthy)
@@ -125,7 +92,6 @@ class RecognitionLoop:
                 self._state.update(CurrentVerdict(verdict="error", name="ML service unreachable"))
                 return
 
-        # Throttled log rotation (issue #79) — once every 24h.
         if now - self._last_log_purge > 86400.0:
             try:
                 n = await asyncio.to_thread(self._db.purge_old_logs, self._log_retention_days)
@@ -146,7 +112,6 @@ class RecognitionLoop:
             self._state.update(CurrentVerdict(verdict="idle"))
             return
 
-        # Pick the biggest face.
         primary = next((f for f in latest.faces if f.is_primary), None)
         if primary is None:
             primary = max(
@@ -171,39 +136,33 @@ class RecognitionLoop:
                     score=result.score,
                     access_type="unknown",
                     timestamp=time.time(),
-                    # Pass liveness info if available from ML model
                     liveness_status="disabled",
                     liveness_ear=primary.ear,
                 )
             )
             return
 
-        # --- LIVENESS LOGIC START ---
+        # --- PASSIVE LIVENESS CHECK ---
         if not self._settings.liveness_enabled:
             await self._grant_access(result, primary, liveness_passed=None)
             return
 
-        # Check if ML model already provided liveness result
-        if hasattr(primary, "liveness_passed"):
-            if primary.liveness_passed:
-                await self._grant_access(result, primary, liveness_passed=True)
-            else:
-                # If liveness failed or is checking
-                self._state.update(
-                    CurrentVerdict(
-                        verdict="liveness_check",
-                        name=result.name,
-                        score=result.score,
-                        access_type=result.access_type,
-                        matched_user_id=result.matched_user_id,
-                        liveness_status="checking",  # or "failed" depending on your protocol
-                        liveness_ear=primary.ear,
-                    )
-                )
+        if primary.liveness_passed:
+            await self._grant_access(result, primary, liveness_passed=True)
         else:
-            # Fallback if ML doesn't provide liveness_passed attribute
-            await self._grant_access(result, primary, liveness_passed=None)
-        # --- LIVENESS LOGIC END ---
+            # Wait for natural blink — no timers
+            self._state.update(
+                CurrentVerdict(
+                    verdict="liveness_check",
+                    name=result.name,
+                    score=result.score,
+                    access_type=result.access_type,
+                    matched_user_id=result.matched_user_id,
+                    liveness_status="checking",
+                    liveness_ear=primary.ear,
+                )
+            )
+            self._log_verdict_change("liveness_check", f"waiting for blink — {result.name}")
 
     async def _grant_access(self, result, face, liveness_passed: bool | None):
         status_msg = (
@@ -240,7 +199,6 @@ class RecognitionLoop:
         )
 
     def _log_verdict_change(self, verdict: str, detail: str) -> None:
-        """Issue #79 — only emit a Python log line when the verdict changes."""
         if self._last_logged_verdict == verdict:
             return
         self._last_logged_verdict = verdict
@@ -266,9 +224,6 @@ def register_one(
     frame_count: int = 5,
     frame_interval_ms: int = 400,
 ) -> tuple[str, list[float]]:
-    """Capture N frames from the ML service, average their embeddings,
-    save the result as a user or guest.
-    """
     embeddings: list[np.ndarray] = []
     interval = frame_interval_ms / 1000.0
 
