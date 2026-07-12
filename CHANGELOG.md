@@ -4,9 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [2.1.0] - 2026-07-12
+[2.1.0]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v2.1.0
+
+### Added
+- Nothing
+
+### Changed
+- Optimizing product so that video stream in ruspberry pi 4 24 fps
+
+### Fixed
+- Fixed liveness detection so that it`s a passive and faster
 
 ## [2.0.0] - 2026-07-05
-
+[2.0.0]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v2.0.0
 ### Added
 - **Issue #76**: Unified users + guests into a single `users` table with
   `type` ('permanent' | 'temporary') and nullable `expires_at`. Full CRUD
