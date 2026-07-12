@@ -29,7 +29,7 @@ Deliver the almost working product, that is already can be deployed on Raspberry
 - estimate the thresholds for correct face detection
 
 # Total Sprint 4 size in Story Points
-ADD THE POINTS
+13
 
 # Summary of the Week 6 trial-release changes
 - improved liveness detection
@@ -37,10 +37,10 @@ ADD THE POINTS
 - implemented on Raspberry Pi
 
 # Link to the Week 6 product access artifact
-[]()
+[MVP v2.1.0](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v2.1.0)
 
 # Link to current access or run instructions
-[]()
+[Instructions](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/v2.1.0/README.md#how-to-run)
 
 # Links
 [README.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/README.md)  
@@ -82,28 +82,29 @@ Customer accepted the current condition of the product, while testing it by hims
 the way for the future work is declared above in the Customer Feedback Response Table.
 
 # Links
-[SemVer trial release]()  
+[SemVer trial release](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v2.1.0)  
 [CHANGELOG.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/CHANGELOG.md)  
 [reports/week6/sprint-review-transcript.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/tree/main/reports/week6/sprint-review-transcript.md)  
-[reports/week6/reflection.md]()  
+[reports/week6/sprint-review-summary.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week6/sprint-review-summary.md)  
+[reports/week6/reflection.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week6/reflection.md)  
 [reports/week6/retrospective.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week6/retrospective.md)  
-[reports/week6/llm-report.md]()  
+[reports/week6/llm-report.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week6/llm-report.md)  
 
 # Summary of the current product status and expected Week 7 follow-up work
 The product is almost ready for release the only things that are supposed to be corrected are
 optimization part and fronted part.
  
 # Contribution traceability table
-| Member | Contribution |
-|--------|--------------|
-| @Kenzyss |              |
-| @newsow |              |
-| @b3ss0n |              |
-| @NadezhdaVoskan |              |
-| @XeOneD |              |
-| @TheShamil |              |
+| Member | Contribution                                                                                                                                                       |
+|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| @Kenzyss | Worked in the lab, launched a project on pi 4, did part 12                                                                                                         |
+| @newsow | Optimising product, make a trial release, did parts 1, 7, 14                                                                                                       |
+| @b3ss0n | Helped with presentation, did parts 10, 13                                                                                                                         |
+| @NadezhdaVoskan | I polished the public repository entry point and customer-facing documentation, maintained the customer handover documentation, recorded rehearsal of presentation |
+| @XeOneD | Did part 5, formed presentatoin, did assignment reports                                                                                                            |
+| @TheShamil | Did parts 6, 11, helped in interview and with presentation                                                                                                         |
 
 # Screenshots
 ![Sprint milestone](images/milestone.png)  
-![Week 6 release]()  
+![Week 6 release](images/release.png)  
 ![Example reviewed issue-linked PR](images/PR.png)  
