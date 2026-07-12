@@ -1,4 +1,4 @@
-"""Optimized ML service for FaceGuard — draw on original, then resize."""
+"""Optimized ML service for FaceGuard — motion-stable passive liveness."""
 
 from __future__ import annotations
 
@@ -40,16 +40,23 @@ _fps_stream = 0
 _fps_inference = 0
 
 # --- Passive Liveness Config ---
-EAR_THRESHOLD = 0.17
-CONSECUTIVE_FRAMES = 3
-MIN_OPEN_FRAMES = 5
+EAR_THRESHOLD = 0.20
+CONSECUTIVE_CLOSED = 2
+MIN_OPEN_BEFORE = 4
+MIN_OPEN_AFTER = 3
 REQUIRED_BLINKS = 2
 BLINK_WINDOW = 3.0
 LIVENESS_TTL_SECONDS = 2.0
-MAX_EAR_HISTORY = 75
+MAX_EAR_HISTORY = 90
+
+# Face stability: max allowed bbox movement between frames (pixels on 320x240)
+MAX_FACE_JITTER = 15
+STABLE_FRAMES_REQUIRED = 5
 
 ear_history: deque[tuple[float, float]] = deque(maxlen=MAX_EAR_HISTORY)
 liveness_valid_until = 0.0
+_last_bbox: tuple[float, float, float, float] | None = None
+_stable_frame_count = 0
 
 RIGHT_EYE_IDX = [362, 385, 387, 263, 373, 380]
 LEFT_EYE_IDX = [33, 160, 158, 133, 153, 144]
@@ -81,6 +88,16 @@ def _update_fps(window: list[float], now: float) -> int:
     return len(window)
 
 
+def _bbox_center(bbox):
+    return ((bbox[0] + bbox[2]) / 2.0, (bbox[1] + bbox[3]) / 2.0)
+
+
+def _bbox_jitter(bbox1, bbox2):
+    c1 = _bbox_center(bbox1)
+    c2 = _bbox_center(bbox2)
+    return abs(c1[0] - c2[0]) + abs(c1[1] - c2[1])
+
+
 def init_model():
     global face_app, mp_face_mesh
 
@@ -90,9 +107,9 @@ def init_model():
     mp_face_mesh_module = mp.solutions.face_mesh
     mp_face_mesh = mp_face_mesh_module.FaceMesh(
         max_num_faces=1,
-        refine_landmarks=False,
-        min_detection_confidence=0.7,
-        min_tracking_confidence=0.7,
+        refine_landmarks=True,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5,
     )
 
 
@@ -108,7 +125,7 @@ def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
     return float((v1 + v2) / (2.0 * h))
 
 
-def _count_blinks(history: deque[tuple[float, float]], now: float) -> int:
+def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
     recent = [(t, e) for t, e in history if now - t <= BLINK_WINDOW]
     if len(recent) < 10:
         return 0
@@ -116,31 +133,42 @@ def _count_blinks(history: deque[tuple[float, float]], now: float) -> int:
     blinks = 0
     i = 0
     while i < len(recent):
+        # Phase 1: eyes open
         open_start = i
         while i < len(recent) and recent[i][1] >= EAR_THRESHOLD:
             i += 1
         open_len = i - open_start
-
-        if open_len < MIN_OPEN_FRAMES:
+        if open_len < MIN_OPEN_BEFORE:
             i += 1
             continue
 
+        # Phase 2: eyes closed
         closed_start = i
         while i < len(recent) and recent[i][1] < EAR_THRESHOLD:
             i += 1
         closed_len = i - closed_start
-
-        if closed_len < CONSECUTIVE_FRAMES:
+        if closed_len < CONSECUTIVE_CLOSED or closed_len > 12:
+            # Too short = noise, too long = looking down, not a blink
             continue
 
-        if i < len(recent) and recent[i][1] >= EAR_THRESHOLD:
-            blinks += 1
+        # Phase 3: eyes open again
+        if i >= len(recent):
+            break
+        reopen_start = i
+        while i < len(recent) and recent[i][1] >= EAR_THRESHOLD:
+            i += 1
+        reopen_len = i - reopen_start
+        if reopen_len < MIN_OPEN_AFTER:
+            continue
+
+        blinks += 1
 
     return blinks
 
 
 def run_inference(frame: np.ndarray) -> dict:
     global liveness_valid_until, cached_faces, cached_landmarks, cached_status
+    global _last_bbox, _stable_frame_count
 
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     h_img, w_img, _ = frame.shape
@@ -155,10 +183,25 @@ def run_inference(frame: np.ndarray) -> dict:
             cached_status = ("NO FACE", (128, 128, 128))
         liveness_valid_until = 0.0
         ear_history.clear()
+        _last_bbox = None
+        _stable_frame_count = 0
         return {"timestamp": _now_iso(), "faces": [], "status": "NO_FACE"}
 
     primary = faces[0]
     bbox = primary.bbox.astype(int)
+    bbox_tuple = tuple(primary.bbox.tolist())
+
+    # Check face stability
+    face_stable = False
+    if _last_bbox is not None:
+        jitter = _bbox_jitter(_last_bbox, bbox_tuple)
+        if jitter < MAX_FACE_JITTER:
+            _stable_frame_count += 1
+            if _stable_frame_count >= STABLE_FRAMES_REQUIRED:
+                face_stable = True
+        else:
+            _stable_frame_count = 0
+    _last_bbox = bbox_tuple
 
     mp_results = mp_face_mesh.process(rgb_frame)
     landmarks = None
@@ -179,15 +222,22 @@ def run_inference(frame: np.ndarray) -> dict:
         while ear_history and current_time - ear_history[0][0] > 5.0:
             ear_history.popleft()
 
-        blink_count = _count_blinks(ear_history, current_time)
-        if blink_count >= REQUIRED_BLINKS:
-            liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
-            is_live = True
+        # Only count blinks if face is stable (not shaking)
+        if face_stable:
+            blink_count = _count_valid_blinks(ear_history, current_time)
+            if blink_count >= REQUIRED_BLINKS:
+                liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
+                is_live = True
 
         is_live = current_time < liveness_valid_until
 
     status_text = "ACCESS GRANTED" if is_live else "LOCKED"
     color = (0, 255, 0) if is_live else (0, 0, 255)
+
+    # Add stability indicator to status for debugging
+    if not face_stable and faces:
+        status_text = "STABILIZE..." if not is_live else status_text
+        color = (0, 165, 255)  # Orange while unstable
 
     embedding = primary.embedding.tolist() if primary.embedding is not None else []
     face_data = [
@@ -364,7 +414,7 @@ async def lifespan(app: FastAPI):
         mp_face_mesh.close()
 
 
-app = FastAPI(title="FaceGuard ML Service", version="2.6.0", lifespan=lifespan)
+app = FastAPI(title="FaceGuard ML Service", version="2.7.0", lifespan=lifespan)
 
 
 @app.get("/health")
