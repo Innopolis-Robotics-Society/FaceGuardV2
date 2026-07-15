@@ -1,12 +1,12 @@
-"""Integration tests for the JSON API endpoints (issue #78).
+"""Integration tests for the JSON API endpoints.
 
 Covers:
   GET    /backend/users          — list
   GET    /backend/users/{id}     — fetch one
   PUT    /backend/users/{id}     — update
   DELETE /backend/users/{id}     — delete
-  GET    /users/{id}             — HTML detail page (issue #77)
-  POST   /users/{id}/update      — HTML form submit (issue #77)
+  GET    /users/{id}             — HTML detail page
+  POST   /users/{id}/update      — HTML form submit
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def _login(client):
 
 
 # ---------------------------------------------------------------------------
-# Issue #78 — JSON API
+# JSON API
 # ---------------------------------------------------------------------------
 
 
@@ -253,7 +253,7 @@ def test_api_requires_auth(client):
 
 
 # ---------------------------------------------------------------------------
-# Issue #77 — HTML detail page
+# HTML detail page
 # ---------------------------------------------------------------------------
 
 
@@ -341,7 +341,7 @@ def test_user_update_form_temporary_without_expires_400(seeded_client):
 
 @pytest.mark.integration
 def test_users_list_has_links_to_detail(seeded_client):
-    """Issue #77 — main user list should link to detail pages."""
+    """Main user list should link to detail pages."""
     _login(seeded_client)
     r = seeded_client.get("/users")
     assert r.status_code == 200

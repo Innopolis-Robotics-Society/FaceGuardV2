@@ -1,4 +1,4 @@
-"""Servo actuator abstraction (US-06, US-07).
+"""Servo actuator abstraction.
 
 Two implementations:
   * `GpioServo` — controls a physical SG90-class servo via `gpiozero`
@@ -10,10 +10,10 @@ Two implementations:
 Both share the `Servo` protocol so the recognition loop doesn't care
 which one it's talking to.
 
-LED indicators (US from customer feedback: green=granted, red=denied,
-yellow=processing) follow the same abstraction. They are toggled by the
-recognition loop based on the verdict, not by the servo itself, so they
-live in `state.py` and the templates, not here.
+LED indicators (green=granted, red=denied, yellow=processing) follow
+the same abstraction pattern but are toggled by the recognition loop
+based on the verdict, not by the servo itself, so they live in
+`state.py` and the templates, not here.
 """
 
 from __future__ import annotations

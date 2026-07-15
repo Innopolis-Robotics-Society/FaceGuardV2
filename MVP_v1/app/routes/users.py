@@ -1,21 +1,21 @@
-"""CRUD routes for users (issue #76, #77, #78).
+"""CRUD routes for users.
 
 Endpoints:
   HTML (admin UI):
     GET  /users                     — list page
-    GET  /users/{id}                — detail + edit page (issue #77)
+    GET  /users/{id}                — detail + edit page
     POST /users/{id}/delete         — delete (form submit)
-    POST /users/{id}/update         — update fields (form submit, issue #77)
+    POST /users/{id}/update         — update fields (form submit)
     POST /register                  — 5-frame registration
-    GET  /register/options/{kind}   — HTMX partial
+    GET  /register/options/{kind}   — HTMX partial (see routes/pages.py)
 
-  JSON API (issue #78):
-    GET  /backend/users/{id}        — fetch one user
-    PUT  /backend/users/{id}        — update one user
+  JSON API:
+    GET    /backend/users           — list (optional ?type= filter)
+    GET    /backend/users/{id}      — fetch one user
+    PUT    /backend/users/{id}      — update one user
     DELETE /backend/users/{id}      — delete one user
-    GET  /backend/users             — list all users (with optional ?type= filter)
 
-All routes require admin session.
+All routes require an admin session.
 """
 
 from __future__ import annotations
@@ -23,21 +23,21 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 import numpy as np
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 
 from ..auth import require_admin
 from ..config import Settings, get_settings
 from ..database import FaceDatabase, User
+from ..jinja import templates
 from ..ml_client import MLClient
 from ..recognition import register_one
 
 log = logging.getLogger(__name__)
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +57,12 @@ def _user_to_dict(u: User) -> dict:
 
 
 def _parse_iso_or_400(s: str | None, field: str) -> datetime | None:
+    """Parse an ISO 8601 string into a UTC-aware datetime.
+
+    Naive strings (e.g. from ``<input type="datetime-local">``, which
+    drops timezone info) are interpreted as local time according to
+    ``settings.local_timezone`` and converted to UTC.
+    """
     if s is None or s == "":
         return None
     try:
@@ -64,12 +70,14 @@ def _parse_iso_or_400(s: str | None, field: str) -> datetime | None:
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid {field}: {s!r}") from e
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
-    return dt
+        # Naive datetime from a datetime-local input — treat as local.
+        tz = ZoneInfo(get_settings().local_timezone)
+        dt = dt.replace(tzinfo=tz)
+    return dt.astimezone(UTC)
 
 
 # ---------------------------------------------------------------------------
-# HTML: list + detail + edit (issue #77)
+# HTML: list + detail + edit
 # ---------------------------------------------------------------------------
 
 
@@ -98,11 +106,10 @@ async def user_detail_page(
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
 ):
-    """Issue #77 — user detail + edit page."""
+    """User detail + edit page with recent activity log."""
     user = db.get_user(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    # Optional logs section — last 50 entries for this name.
     logs = db.list_logs(limit=50, user_filter=user.name)
     return templates.TemplateResponse(
         request,
@@ -124,7 +131,7 @@ async def user_update_form(
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
 ):
-    """Issue #77 — handle edit form submission. Forwards to db.update_user()."""
+    """Handle edit form submission. Forwards to db.update_user()."""
     user = db.get_user(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -135,7 +142,6 @@ async def user_update_form(
     if type not in ("permanent", "temporary"):
         raise HTTPException(status_code=400, detail="Invalid type")
 
-    # Resolve expires_at.
     if type == "temporary":
         expires_dt = _parse_iso_or_400(expires_at, "expires_at")
         if expires_dt is None:
@@ -178,7 +184,7 @@ async def delete_user(
     return RedirectResponse("/users", status_code=303)
 
 
-# Legacy aliases for backward compatibility with old bookmarks/templates.
+# Legacy aliases kept for backward compatibility with old bookmarks/templates.
 @router.post("/guests/{guest_id}/delete")
 async def delete_guest_alias(
     guest_id: int,
@@ -204,22 +210,30 @@ async def register(
     request: Request,
     name: str = Form(...),
     access_type: str = Form(...),
-    guest_days: int | None = Form(None),
+    expires_at: str = Form(None),
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
     ml: MLClient = Depends(),
     settings: Settings = Depends(get_settings),
 ):
+    """Capture 5 frames from the camera and register a new user.
+
+    For ``access_type=temporary`` the form must include ``expires_at``
+    (a naive local datetime from <input type="datetime-local">).
+    """
     name = name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Name is required")
 
     is_guest = access_type == "temporary"
-    if is_guest and (not guest_days or guest_days <= 0):
-        raise HTTPException(
-            status_code=400,
-            detail="Temporary access requires a positive number of days",
-        )
+    expires_dt: datetime | None = None
+    if is_guest:
+        expires_dt = _parse_iso_or_400(expires_at, "expires_at")
+        if expires_dt is None or expires_dt <= datetime.now(UTC):
+            raise HTTPException(
+                status_code=400,
+                detail="Temporary access requires a future expiration date",
+            )
 
     if not is_guest and db.get_user_by_name(name) is not None:
         return templates.TemplateResponse(
@@ -239,7 +253,7 @@ async def register(
             ml,
             name=name,
             is_guest=is_guest,
-            guest_days=guest_days,
+            expires_at=expires_dt,
             frame_count=settings.registration_frame_count,
             frame_interval_ms=settings.registration_frame_interval_ms,
         )
@@ -268,7 +282,7 @@ async def register(
 
 
 # ---------------------------------------------------------------------------
-# JSON API (issue #78) — /backend/users[/{id}]
+# JSON API — /backend/users[/{id}]
 # ---------------------------------------------------------------------------
 
 
@@ -279,8 +293,8 @@ async def api_list_users(
     type: str | None = Query(None),
     include_expired: bool = Query(True),
 ):
-    """List users as JSON. Optional `?type=permanent|temporary` and
-    `?include_expired=false` filters."""
+    """List users as JSON. Optional ``?type=permanent|temporary`` and
+    ``?include_expired=false`` filters."""
     type_filter = None  # type: ignore[assignment]
     if type in ("permanent", "temporary"):
         type_filter = type  # type: ignore[assignment]
@@ -294,7 +308,7 @@ async def api_get_user(
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
 ):
-    """Issue #78 — GET one user as JSON."""
+    """Fetch one user as JSON."""
     user = db.get_user(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -308,13 +322,13 @@ async def api_update_user(
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
 ):
-    """Issue #78 — PUT update one user. Body is JSON with any of:
+    """Update one user. Body is JSON with any of:
         {name, type, expires_at, embedding}
 
-    `type` must be 'permanent' or 'temporary'.
-    `expires_at` is an ISO 8601 string; required if type='temporary',
+    ``type`` must be 'permanent' or 'temporary'.
+    ``expires_at`` is an ISO 8601 string; required if type='temporary',
     ignored (and cleared) if type='permanent'.
-    `embedding` is a list of 512 floats; if provided, replaces the
+    ``embedding`` is a list of 512 floats; if provided, replaces the
     stored embedding.
     """
     try:

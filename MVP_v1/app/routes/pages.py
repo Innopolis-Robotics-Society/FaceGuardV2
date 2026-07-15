@@ -1,19 +1,33 @@
 """Page routes: dashboard, registration form, logs.
 
-User list + detail pages live in `routes/users.py` (issue #76/#77).
+User list + detail pages live in `routes/users.py`.
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.templating import Jinja2Templates
 
 from ..auth import require_admin
+from ..config import get_settings
 from ..database import FaceDatabase
+from ..jinja import templates
 from ..state import state
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
+
+
+def _default_expires_local() -> str:
+    """Return the default expiration (7 days from now) as a naive local
+    datetime string suitable for <input type="datetime-local">."""
+    s = get_settings()
+    return (
+        (datetime.now(UTC) + timedelta(days=7))
+        .astimezone(ZoneInfo(s.local_timezone))
+        .strftime("%Y-%m-%dT%H:%M")
+    )
 
 
 @router.get("/")
@@ -39,11 +53,13 @@ async def register_page(
     request: Request,
     _admin=Depends(require_admin),
 ):
+    s = get_settings()
     return templates.TemplateResponse(
         request,
         "register.html",
         {
-            "frame_count": 5,
+            "frame_count": s.registration_frame_count,
+            "default_expires": _default_expires_local(),
         },
     )
 
@@ -54,15 +70,21 @@ async def register_options(
     request: Request,
     _admin=Depends(require_admin),
 ):
+    """HTMX partial swap target for the access-type radio group.
+
+    Returns the expiration-date picker when ``kind=temporary`` and an
+    empty fragment when ``kind=permanent`` (so the picker is removed
+    from the DOM when the user switches back).
+    """
     if kind == "temporary":
         return templates.TemplateResponse(
             request,
             "partials/guest_options.html",
-            {},
+            {"default_expires": _default_expires_local()},
         )
     return templates.TemplateResponse(
         request,
-        "partials/guest_options.html",
+        "partials/empty.html",
         {},
     )
 

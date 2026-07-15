@@ -3,7 +3,7 @@
 
 {% block content %}
 <header>
-  <h2>Access log (US-10)</h2>
+  <h2>Access log</h2>
   <form method="get" action="/logs" class="grid">
     <label>
       Filter by name
@@ -36,7 +36,7 @@
     <tbody>
       {% for e in entries %}
       <tr class="log-row {% if e.success %}log-ok{% else %}log-denied{% endif %}">
-        <td>{{ e.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>{{ e.timestamp|localdt('%Y-%m-%d %H:%M:%S') }}</td>
         <td>{{ e.name }}</td>
         <td>{{ e.access_type }}</td>
         <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
