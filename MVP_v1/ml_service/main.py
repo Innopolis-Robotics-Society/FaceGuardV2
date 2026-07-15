@@ -150,6 +150,7 @@ def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
             i += 1
         open_len = i - open_start
         if open_len < MIN_OPEN_BEFORE:
+            i += 1
             continue
 
         # Phase 2: eyes closed
