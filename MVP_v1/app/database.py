@@ -1,19 +1,12 @@
 """Centralized data access layer for FaceGuard.
 
-This module is the *only* place in the codebase that knows about SQL.
-Every other module (recognition loop, web routes, auth, registration
-flow) calls the typed methods of `FaceDatabase` and never sees a raw
-query, cursor, or BLOB.
+This module is the only place in the codebase that knows about SQL. All
+other modules call the typed methods of ``FaceDatabase`` and never see a
+raw query, cursor, or BLOB. This keeps the schema swappable (we could
+move to PostgreSQL later by editing this file only) and gives us a
+single seam to add caching, logging, or transactions.
 
-Issues addressed here:
-  * #29 — Centralized data access layer (original).
-  * #76 — Unify `users` + `guests` into a single `users` table with a
-          `type` column ('permanent' | 'temporary') and a nullable
-          `expires_at`. Supports type switching and full CRUD.
-  * #79 — recognize() now logs state transitions only (not every call),
-          and `purge_old_logs(days)` rotates the audit log.
-
-Schema lives in `app/schema.sql` and is applied idempotently on startup.
+Schema lives in ``app/schema.sql`` and is applied idempotently on startup.
 """
 
 from __future__ import annotations
@@ -41,10 +34,11 @@ UserType = Literal["permanent", "temporary"]
 
 @dataclass(frozen=True)
 class User:
-    """Unified user record (issue #76).
+    """A registered user.
 
-    `type` is 'permanent' or 'temporary'. `expires_at` is None for
-    permanent users and a timezone-aware datetime for temporary ones.
+    ``type`` is ``'permanent'`` or ``'temporary'``. ``expires_at`` is
+    ``None`` for permanent users and a timezone-aware datetime for
+    temporary ones.
     """
 
     id: int
@@ -76,11 +70,11 @@ class Admin:
 
 @dataclass(frozen=True)
 class RecognitionResult:
-    """Outcome of a single recognize() call.
+    """Outcome of a single ``recognize()`` call.
 
-    `access_type == "unknown"` means no match above threshold; in that case
-    `name` is `"Unknown"` and `score` carries the best similarity we saw
-    (useful for audit logging of denied attempts).
+    When ``access_type == "unknown"``, no match above the threshold was
+    found; ``name`` is then ``"Unknown"`` and ``score`` carries the best
+    similarity observed (useful for audit logging of denied attempts).
     """
 
     name: str
@@ -121,8 +115,8 @@ def _to_iso(dt: datetime) -> str:
 def _from_iso(value: str) -> datetime:
     """Parse an ISO 8601 string from SQLite into a timezone-aware datetime.
 
-    SQLite's `CURRENT_TIMESTAMP` returns naive UTC strings like
-    `2026-06-12 14:32:11`, so we accept both that and full ISO format.
+    SQLite's ``CURRENT_TIMESTAMP`` returns naive UTC strings like
+    ``2026-06-12 14:32:11``, so we accept both that and full ISO format.
     """
     s = value.strip()
     if s.endswith("Z"):
@@ -145,7 +139,7 @@ def _from_iso(value: str) -> datetime:
 class FaceDatabase:
     """SQLite-backed data access layer for FaceGuard.
 
-    Thread-safe: a single `sqlite3.Connection` guarded by a re-entrant
+    Thread-safe: a single ``sqlite3.Connection`` guarded by a re-entrant
     lock. SQLite handles concurrent reads from multiple threads fine, but
     writes need serialization, so we serialize all access — the workload
     is tiny (50–100 rows) and correctness beats micro-optimization.
@@ -163,13 +157,13 @@ class FaceDatabase:
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.execute("PRAGMA foreign_keys=ON;")
         self._apply_schema()
-        # Issue #79 — track the last recognize() outcome so we only log
-        # state transitions (e.g. idle -> granted, granted -> denied)
-        # instead of writing a row on every poll.
+        # Tracks the last recognize() outcome so we only log state
+        # transitions (e.g. idle -> granted, granted -> denied) instead
+        # of writing a row on every poll.
         self._last_recognize_state: tuple[str, str] | None = None
 
     # ------------------------------------------------------------------
-    # Lifecycle + schema bootstrap
+    # Lifecycle
     # ------------------------------------------------------------------
 
     def _apply_schema(self) -> None:
@@ -188,7 +182,7 @@ class FaceDatabase:
         self.close()
 
     # ------------------------------------------------------------------
-    # Users — unified permanent + temporary (issue #76)
+    # Users — unified permanent + temporary
     # ------------------------------------------------------------------
 
     def register_user(
@@ -200,11 +194,11 @@ class FaceDatabase:
     ) -> User:
         """Insert a user of the given type.
 
-        For `type='temporary'`, `expires_at` must be a timezone-aware
-        datetime in the future. For `type='permanent'`, `expires_at` is
-        ignored and stored as NULL.
+        For ``type='temporary'``, ``expires_at`` must be a timezone-aware
+        datetime in the future. For ``type='permanent'``, ``expires_at``
+        is ignored and stored as NULL.
 
-        Raises `sqlite3.IntegrityError` if the name already exists.
+        Raises ``sqlite3.IntegrityError`` if the name already exists.
         """
         if type not in ("permanent", "temporary"):
             raise ValueError(f"invalid user type: {type!r}")
@@ -243,9 +237,9 @@ class FaceDatabase:
     ) -> list[User]:
         """List users, optionally filtered by type and/or expiry.
 
-        - `type_filter=None` -> both permanent and temporary.
-        - `include_expired=False` -> exclude temporary users whose
-          `expires_at` is in the past (permanent users are always included).
+        - ``type_filter=None`` returns both permanent and temporary.
+        - ``include_expired=False`` excludes temporary users whose
+          ``expires_at`` is in the past (permanent users are always included).
         """
         clauses: list[str] = []
         params: list[object] = []
@@ -275,35 +269,34 @@ class FaceDatabase:
         expires_at: datetime | None | Literal["unset"] | None = None,
         embedding: np.ndarray | None = None,
     ) -> User | None:
-        """Update one or more fields of a user. Returns the updated user,
-        or None if the user_id doesn't exist.
+        """Update one or more fields of a user.
 
-        Type-switching rules (issue #76):
-          * Switching to 'permanent' clears `expires_at` (sets to NULL).
-          * Switching to 'temporary' requires `expires_at` to be provided
-            (either in this call or already set in the DB).
+        Returns the updated user, or ``None`` if ``user_id`` doesn't exist.
 
-        Pass `expires_at=None` together with `type='temporary'` to keep
-        the existing expires_at. To explicitly clear it, switch type to
-        'permanent' instead.
+        Type-switching rules:
+          * Switching to ``'permanent'`` clears ``expires_at`` (sets to NULL).
+          * Switching to ``'temporary'`` requires ``expires_at`` to be
+            provided (either in this call or already set in the DB).
 
-        Raises `ValueError` on invalid combinations.
-        Raises `sqlite3.IntegrityError` if the new name conflicts with
+        Pass ``expires_at=None`` together with ``type='temporary'`` to
+        keep the existing ``expires_at``. To explicitly clear it, switch
+        the type to ``'permanent'`` instead.
+
+        Raises ``ValueError`` on invalid combinations.
+        Raises ``sqlite3.IntegrityError`` if the new name conflicts with
         an existing user.
         """
         # Sentinel for "not provided" so we can distinguish from
-        # `expires_at=None` (which means "clear it" when type=permanent).
+        # ``expires_at=None`` (which means "clear it" when type=permanent).
         NOT_PROVIDED = object()
         if expires_at is None and type != "permanent":
             expires_at_arg = NOT_PROVIDED  # type: ignore[assignment]
         else:
             expires_at_arg = expires_at  # type: ignore[assignment]
 
-        # Validate type if provided.
         if type is not None and type not in ("permanent", "temporary"):
             raise ValueError(f"invalid user type: {type!r}")
 
-        # Validate expires_at if explicitly provided.
         if expires_at_arg is not None and expires_at_arg is not NOT_PROVIDED:
             if not isinstance(expires_at_arg, datetime):  # type: ignore[unreachable]
                 raise ValueError("expires_at must be a datetime")
@@ -315,14 +308,11 @@ class FaceDatabase:
             if existing is None:
                 return None
 
-            # Resolve the effective type.
             new_type = type if type is not None else existing.type
 
-            # Resolve the effective expires_at.
             if new_type == "permanent":
                 new_expires = None  # always clear for permanent
             else:
-                # Temporary user.
                 if expires_at_arg is not None and expires_at_arg is not NOT_PROVIDED:
                     new_expires = expires_at_arg  # type: ignore[assignment]
                 elif existing.expires_at is not None:
@@ -330,7 +320,6 @@ class FaceDatabase:
                 else:
                     raise ValueError("temporary user requires expires_at to be set")
 
-            # Build the UPDATE statement.
             sets: list[str] = []
             params: list[object] = []
             if name is not None and name != existing.name:
@@ -339,7 +328,6 @@ class FaceDatabase:
             if type is not None and type != existing.type:
                 sets.append("type = ?")
                 params.append(type)
-            # expires_at handling: always set to match the effective value.
             sets.append("expires_at = ?")
             params.append(_to_iso(new_expires) if new_expires else None)
             if embedding is not None:
@@ -347,7 +335,6 @@ class FaceDatabase:
                 params.append(_encode_embedding(embedding))
 
             if not sets:
-                # Nothing to update.
                 return existing
 
             params.append(user_id)
@@ -365,10 +352,10 @@ class FaceDatabase:
             return cur.rowcount > 0
 
     def purge_expired(self) -> int:
-        """Delete every temporary user whose `expires_at` is in the past.
+        """Delete every temporary user whose ``expires_at`` is in the past.
 
         Returns the number of rows deleted. Called lazily by
-        `recognize()` and periodically by the recognition loop.
+        ``recognize()`` and periodically by the recognition loop.
         """
         now_iso = _to_iso(datetime.now(UTC))
         with self._lock:
@@ -382,7 +369,7 @@ class FaceDatabase:
     # ------------------------------------------------------------------
     # Backward compatibility — legacy guest API.
     #
-    # These wrap the unified user API so that older code (and tests)
+    # These wrap the unified user API so that older code and tests
     # continue to work. New code should use register_user(type='temporary').
     # ------------------------------------------------------------------
 
@@ -416,7 +403,7 @@ class FaceDatabase:
         return self.purge_expired()
 
     # ------------------------------------------------------------------
-    # Logs (US-10: audit log) + rotation (issue #79)
+    # Audit log
     # ------------------------------------------------------------------
 
     def add_log(
@@ -461,10 +448,9 @@ class FaceDatabase:
         return [_row_to_log(r) for r in rows]
 
     def purge_old_logs(self, days: int = 30) -> int:
-        """Delete log entries older than `days` days.
+        """Delete log entries older than ``days`` days.
 
-        Default retention is 30 days per issue #79. Returns the number
-        of rows deleted.
+        Default retention is 30 days. Returns the number of rows deleted.
         """
         cutoff = datetime.now(UTC) - timedelta(days=days)
         with self._lock:
@@ -478,10 +464,10 @@ class FaceDatabase:
     # ------------------------------------------------------------------
     # Recognition — the hot path.
     #
-    # Issue #79: by default, audit logs are written only on state
-    # transitions (verdict change OR matched-name change). This reduces
-    # log volume 5–10x without losing security-relevant events. Pass
-    # `log_transitions_only=False` to force a log entry on every call
+    # By default, audit logs are written only on state transitions
+    # (verdict change OR matched-name change). This reduces log volume
+    # 5–10x without losing security-relevant events. Pass
+    # ``log_transitions_only=False`` to force a log entry on every call
     # (used by some tests).
     # ------------------------------------------------------------------
 
@@ -517,13 +503,12 @@ class FaceDatabase:
             matched_user_id=None,
         )
 
-        # 3+4. Compare against all candidates.
+        # 3+4. Compare against all candidates (cosine sim via dot product,
+        # since embeddings are L2-normalized at write time).
         for row in rows:
             cand = _decode_embedding(row["embedding"])
             score = float(np.dot(probe, cand))
             if score > best.score:
-                # Map the DB type to the legacy access_type for backward
-                # compatibility with the logs schema ('user' | 'guest').
                 access_type: AccessType = "user" if row["type"] == "permanent" else "guest"
                 best = RecognitionResult(
                     name=row["name"],
@@ -544,7 +529,7 @@ class FaceDatabase:
         else:
             result = best
 
-        # 6. Audit log — only on state transitions (issue #79).
+        # 6. Audit log — only on state transitions.
         new_state = (result.access_type, result.name)
         should_log = True
         if log_transitions_only and self._last_recognize_state == new_state:
@@ -590,16 +575,6 @@ class FaceDatabase:
             ).fetchone()
         return _row_to_admin(row) if row else None
 
-    def list_admins(self) -> list[Admin]:
-        with self._lock:
-            rows = self._conn.execute("SELECT * FROM admins ORDER BY username ASC").fetchall()
-        return [_row_to_admin(r) for r in rows]
-
-    def count_admins(self) -> int:
-        with self._lock:
-            row = self._conn.execute("SELECT COUNT(*) AS n FROM admins").fetchone()
-        return int(row["n"])
-
     def bootstrap_admin(
         self,
         username: str,
@@ -613,7 +588,7 @@ class FaceDatabase:
         return self.add_admin(username, password_hash)
 
     # ------------------------------------------------------------------
-    # Misc — for health checks and status endpoint.
+    # Misc — for health checks and the status endpoint.
     # ------------------------------------------------------------------
 
     def counts(self) -> dict[str, int]:
@@ -632,11 +607,6 @@ class FaceDatabase:
             "active_guests": int(active_temp["n"]),
             "logs": int(logs["n"]),
         }
-
-    def vacuum(self) -> None:
-        with self._lock:
-            self._conn.execute("VACUUM")
-            self._conn.commit()
 
 
 # ---------------------------------------------------------------------------

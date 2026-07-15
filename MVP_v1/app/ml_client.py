@@ -1,11 +1,10 @@
 """HTTP client for the ML service.
 
-The ML service is owned by another team member. It owns the camera and
-exposes two endpoints:
+The ML service owns the camera and exposes two endpoints:
 
   GET /ml/stream
       MJPEG stream of annotated frames (bounding boxes drawn on top).
-      The backend proxies this to the browser at `/stream`.
+      The backend proxies this to the browser at ``/stream``.
 
   GET /ml/latest
       JSON describing the latest processed frame:
@@ -15,12 +14,16 @@ exposes two endpoints:
             {
               "bbox": [x1, y1, x2, y2],
               "embedding": [512 floats],
-              "confidence": 0.98
+              "confidence": 0.98,
+              "ear": 0.21,
+              "is_primary": true,
+              "liveness_passed": true
             }
           ]
         }
 
-The real ML service lives in `ml_service/main.py` (InsightFace + OpenCV).
+The real ML service lives in ``ml_service/main.py`` (InsightFace + OpenCV
++ MediaPipe for passive liveness).
 """
 
 from __future__ import annotations
@@ -40,8 +43,8 @@ class DetectedFace:
     embedding: np.ndarray  # float32, (512,)
     confidence: float
     ear: float = 0.0
-    is_primary: bool = False  # ← НОВОЕ
-    liveness_passed: bool = False  # ← НОВОЕ
+    is_primary: bool = False
+    liveness_passed: bool = False
 
 
 @dataclass(frozen=True)
@@ -53,9 +56,9 @@ class LatestFrame:
 class MLClient:
     """Thin async client around the ML service.
 
-    Uses a single reusable `httpx.AsyncClient` with a generous timeout —
+    Uses a single reusable ``httpx.AsyncClient`` with a generous timeout —
     the ML service can be slow on the Raspberry Pi 4 (single-frame
-    detection latency is typically 200–500ms on `buffalo_s`).
+    detection latency is typically 200–500ms on ``buffalo_sc``).
     """
 
     def __init__(self, base_url: str, timeout: float = 5.0):
@@ -96,7 +99,7 @@ class MLClient:
     async def get_latest(self) -> LatestFrame | None:
         """Fetch the latest annotated frame metadata.
 
-        Returns None if the ML service is unreachable or returned no
+        Returns ``None`` if the ML service is unreachable or returned no
         recent frame (e.g. camera still warming up).
         """
         await self.start()
@@ -145,8 +148,8 @@ class MLClient:
 
         Used by the backend to proxy the camera stream to browsers.
         Yields raw bytes — the caller is expected to write them to an
-        HTTP response with the appropriate multipart/x-mixed-replace
-        content-type.
+        HTTP response with the appropriate
+        ``multipart/x-mixed-replace`` content-type.
         """
         await self.start()
         assert self._client is not None

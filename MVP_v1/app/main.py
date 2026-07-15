@@ -13,7 +13,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -34,12 +34,6 @@ from .state import state
 log = logging.getLogger("faceguard")
 
 
-# ---------------------------------------------------------------------------
-# Lifespan: build singletons (DB, ML client, servo, recognition loop),
-#           start the background poller, and tear everything down on exit.
-# ---------------------------------------------------------------------------
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings: Settings = get_settings()
@@ -48,20 +42,16 @@ async def lifespan(app: FastAPI):
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    # --- DB ---
     db = FaceDatabase(db_path=settings.database_path)
     bootstrap_admin_from_env(db, settings)
     log.info("DB ready at %s", settings.database_path)
 
-    # --- ML client ---
     ml = MLClient(base_url=settings.ml_service_url)
     await ml.start()
 
-    # --- Servo ---
     servo = make_servo(settings)
     log.info("Servo mode: %s", servo.mode)
 
-    # --- Recognition loop ---
     loop = RecognitionLoop(
         db=db,
         ml=ml,
@@ -73,7 +63,6 @@ async def lifespan(app: FastAPI):
     )
     await loop.start()
 
-    # Stash on app.state for Depends() to pick up.
     app.state.db = db
     app.state.ml = ml
     app.state.servo = servo
@@ -89,11 +78,6 @@ async def lifespan(app: FastAPI):
         db.close()
 
 
-# ---------------------------------------------------------------------------
-# App
-# ---------------------------------------------------------------------------
-
-
 app = FastAPI(
     title="FaceGuard Backend",
     version="0.1.0",
@@ -101,26 +85,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
 # Session middleware (signed cookies).
 settings = get_settings()
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.secret_key.get_secret_value(),
     session_cookie=settings.session_cookie_name,
-    max_age=12 * 3600,  # 12h
+    max_age=12 * 3600,
     https_only=settings.session_cookie_secure,
     same_site="lax",
 )
 
-
-# Static files (CSS, JS, favicon).
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-
-# Register routers.
 app.include_router(auth_routes.router)
 app.include_router(pages_routes.router)
 app.include_router(stream_routes.router)
@@ -130,26 +109,9 @@ app.include_router(logs_routes.router)
 
 
 # ---------------------------------------------------------------------------
-# Dependencies — provide singletons to route handlers.
+# Dependency injection — wire FastAPI's `Depends(FaceDatabase)` and
+# `Depends(MLClient)` to the singletons stashed on app.state during lifespan.
 # ---------------------------------------------------------------------------
-
-
-def get_db(request) -> FaceDatabase:
-    return request.app.state.db
-
-
-def get_ml(request) -> MLClient:
-    return request.app.state.ml
-
-
-def get_servo(request):
-    return request.app.state.servo
-
-
-# Override module-level Depends used in route signatures.
-# (FastAPI lets route handlers declare `db: FaceDatabase = Depends()` and
-# we wire that to the request-scoped singleton here.)
-from fastapi import Request  # noqa: E402
 
 
 def _db_dep(request: Request) -> FaceDatabase:
@@ -160,15 +122,6 @@ def _ml_dep(request: Request) -> MLClient:
     return request.app.state.ml
 
 
-def _settings_dep() -> Settings:
-    return get_settings()
-
-
-# Make the dependency injectors visible to `Depends(...)` lookups.
-# The routes use `Depends()` with type hints that match these functions'
-# return types, so FastAPI's DI container will pick them up automatically
-# if they are declared with matching types — we expose them under the
-# expected names for clarity and to keep mypy happy.
 app.dependency_overrides[FaceDatabase] = _db_dep
 app.dependency_overrides[MLClient] = _ml_dep
 

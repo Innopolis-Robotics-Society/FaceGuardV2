@@ -1,14 +1,14 @@
 """In-memory shared state for the recognition loop and the UI.
 
-The recognition loop (see `recognition.py`) continuously polls the ML
-service and runs `FaceDatabase.recognize(...)`. The verdict is written
-into a single `SystemState` object. The web UI reads from the same
-object (for the dashboard snapshot) and from the SSE channel (for live
-updates without polling).
+The recognition loop continuously polls the ML service and runs
+``FaceDatabase.recognize(...)``. The verdict is written into a single
+``SystemState`` object. The web UI reads from the same object (for the
+dashboard snapshot) and from the SSE channel (for live updates without
+polling).
 
 This is intentionally not a database — it's the volatile "what is the
 system doing right now" cache. The audit trail lives in SQLite via
-`FaceDatabase.add_log(...)`.
+``FaceDatabase.add_log(...)``.
 """
 
 from __future__ import annotations
@@ -29,12 +29,13 @@ Verdict = Literal["granted", "denied", "scanning", "idle", "error", "liveness_ch
 class CurrentVerdict:
     """The latest recognition decision, plus UI hints.
 
-    `verdict` is one of:
-      * `granted`   — face matched, access granted, servo fired.
-      * `denied`    — face seen but no match above threshold.
-      * `scanning`  — ML service returned a face, comparison in flight.
-      * `idle`      — no face detected in the latest frame.
-      * `error`     — ML service unreachable or comparison crashed.
+    ``verdict`` is one of:
+      * ``granted``        — face matched, access granted, servo fired.
+      * ``denied``         — face seen but no match above threshold.
+      * ``scanning``       — ML service returned a face, comparison in flight.
+      * ``idle``           — no face detected in the latest frame.
+      * ``error``          — ML service unreachable or comparison crashed.
+      * ``liveness_check`` — matched, waiting for the user to blink.
     """
 
     verdict: Verdict = "idle"
@@ -43,7 +44,6 @@ class CurrentVerdict:
     access_type: AccessType = "unknown"
     matched_user_id: int | None = None
     timestamp: float = field(default_factory=time.time)
-    # LIVENESS
     liveness_status: Literal["disabled", "checking", "passed", "failed"] = "disabled"
     liveness_ear: float = 0.0
 
@@ -56,7 +56,6 @@ class CurrentVerdict:
             "matched_user_id": self.matched_user_id,
             "timestamp": datetime.fromtimestamp(self.timestamp, tz=UTC).isoformat(),
             "is_door_open": self.verdict == "granted",
-            # LIVENESS
             "liveness_status": self.liveness_status,
             "liveness_ear": round(self.liveness_ear, 4),
         }
@@ -65,9 +64,9 @@ class CurrentVerdict:
 class SystemState:
     """Thread-safe single-writer / multi-reader state.
 
-    The recognition loop calls `update()` from a background asyncio task
-    or thread. The web layer reads via `snapshot()` (one-shot) or
-    subscribes via `subscribe()` (asyncio Queue, drained by the SSE
+    The recognition loop calls ``update()`` from a background asyncio
+    task. The web layer reads via ``snapshot()`` (one-shot) or
+    subscribes via ``subscribe()`` (asyncio Queue, drained by the SSE
     endpoint).
     """
 
@@ -77,10 +76,6 @@ class SystemState:
         self._subscribers: list[asyncio.Queue] = []
         self._ml_healthy: bool = False
         self._last_ml_check: float = 0.0
-
-    # ------------------------------------------------------------------
-    # Reads
-    # ------------------------------------------------------------------
 
     def snapshot(self) -> dict:
         with self._lock:
@@ -106,10 +101,6 @@ class SystemState:
             if q in self._subscribers:
                 self._subscribers.remove(q)
 
-    # ------------------------------------------------------------------
-    # Writes
-    # ------------------------------------------------------------------
-
     def update(self, verdict: CurrentVerdict) -> None:
         with self._lock:
             self._verdict = verdict
@@ -128,7 +119,7 @@ class SystemState:
                 try:
                     q.put_nowait(verdict.to_dict())
                 except asyncio.QueueFull:
-                    pass  # give up on this client for this update
+                    pass
 
     def set_ml_health(self, healthy: bool) -> None:
         with self._lock:

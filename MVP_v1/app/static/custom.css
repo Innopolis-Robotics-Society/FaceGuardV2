@@ -1,37 +1,52 @@
 /* =========================================================
-   FaceGuard — small custom overrides on top of Pico.css.
-   Pico provides classless styling; we only tweak a few things
-   specific to the dashboard layout.
+   FaceGuard admin UI — custom styles on top of Pico.css.
+   Pico provides classless styling; this file only refines
+   colors and spacing for the dashboard layout.
    ========================================================= */
 
 :root {
+  /* Status colors */
   --fg-granted: #2e7d32;
   --fg-denied: #c62828;
-  --fg-idle: #757575;
+  --fg-idle: #6b7280;
   --fg-scanning: #f9a825;
   --fg-error: #c62828;
+
+  /* Neutrals — softer than Pico's pure black on white */
+  --fg-text: #2a2f36;
+  --fg-text-muted: #5b6470;
+  --fg-border: #e3e7ec;
+  --fg-border-strong: #c8ced6;
+  --fg-bg: #f6f7f9;
+  --fg-card: #ffffff;
+  --fg-card-header: #f1f3f6;
 }
 
 body {
-  background: #f7f7f8;
+  background: var(--fg-bg);
+  color: var(--fg-text);
 }
 
+/* ----------------------------------------------------------------
+   Top navigation bar — dark on light body, full width.
+   ---------------------------------------------------------------- */
 .topnav {
-  background: #1a1a1a;
+  background: #1a1f26;
   color: #fafafa;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.25rem;
   margin-bottom: 1.5rem;
   border-radius: 0;
 }
 .topnav a {
-  color: #e0e0e0;
+  color: #d6dae0;
   text-decoration: none;
-  padding: 0.25rem 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 .topnav a:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
 }
 .topnav ul {
   margin: 0;
@@ -44,15 +59,25 @@ body {
 .topnav strong {
   color: #ffffff;
   font-size: 1.1rem;
+  margin-right: 0.5rem;
 }
 
+/* ----------------------------------------------------------------
+   Typography helpers
+   ---------------------------------------------------------------- */
+.muted { color: var(--fg-text-muted); }
+.small { font-size: 0.85rem; }
+
+/* ----------------------------------------------------------------
+   Login card
+   ---------------------------------------------------------------- */
 .login-card {
   max-width: 380px;
   margin: 4rem auto;
   padding: 2rem;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  background: var(--fg-card);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
 }
 .login-card .error {
   display: block;
@@ -60,14 +85,13 @@ body {
   color: var(--fg-denied);
 }
 
-.muted { color: #757575; }
-.small { font-size: 0.85rem; }
-
-/* Camera + verdict overlay */
+/* ----------------------------------------------------------------
+   Camera + verdict overlay (dashboard)
+   ---------------------------------------------------------------- */
 .video-wrap {
   position: relative;
   background: #000;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   aspect-ratio: 4 / 3;
 }
@@ -83,7 +107,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1.1rem;
   background: rgba(0, 0, 0, 0.7);
   color: #fff;
   display: flex;
@@ -91,34 +115,80 @@ body {
   gap: 0.2rem;
   transition: background 0.2s ease;
 }
-.verdict-overlay.granted { background: rgba(46, 125, 50, 0.85); }
-.verdict-overlay.denied  { background: rgba(198, 40, 40, 0.85); }
-.verdict-overlay.scanning{ background: rgba(249, 168, 37, 0.85); }
-.verdict-overlay.error   { background: rgba(198, 40, 40, 0.9); }
+.verdict-overlay.granted    { background: rgba(46, 125, 50, 0.88); }
+.verdict-overlay.denied     { background: rgba(198, 40, 40, 0.88); }
+.verdict-overlay.scanning   { background: rgba(249, 168, 37, 0.88); }
+.verdict-overlay.liveness_check { background: rgba(249, 168, 37, 0.88); }
+.verdict-overlay.error      { background: rgba(198, 40, 40, 0.92); }
 
 #verdict-text { font-size: 1.1rem; font-weight: 600; }
 #verdict-meta { font-size: 0.85rem; opacity: 0.9; }
 
-/* Status panel */
+/* ----------------------------------------------------------------
+   Status panel (dashboard right column)
+   ---------------------------------------------------------------- */
 .status-panel table { font-size: 0.95rem; }
 .status-panel td:first-child {
-  color: #757575;
+  color: var(--fg-text-muted);
   width: 50%;
 }
 
-/* Log rows */
-.log-row td { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.85rem; }
-.log-ok     { background: rgba(46, 125, 50, 0.08); }
-.log-denied { background: rgba(198, 40, 40, 0.08); }
+/* ----------------------------------------------------------------
+   Tables — softer borders and headers than Pico defaults.
+   ---------------------------------------------------------------- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+table th,
+table td {
+  border-bottom: 1px solid var(--fg-border);
+  padding: 0.55rem 0.75rem;
+}
+table thead th {
+  background: var(--fg-card-header);
+  color: var(--fg-text);
+  font-weight: 600;
+  border-bottom: 1px solid var(--fg-border-strong);
+}
+table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
 
-/* Registration result cards */
-.register-success { border-left: 4px solid var(--fg-granted); padding: 1rem 1.25rem; }
-.register-error   { border-left: 4px solid var(--fg-denied);  padding: 1rem 1.25rem; }
+/* Log rows — color-coded by outcome */
+.log-row td {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+.log-ok     { background: rgba(46, 125, 50, 0.06); }
+.log-denied { background: rgba(198, 40, 40, 0.06); }
+
+/* ----------------------------------------------------------------
+   Registration result cards (HTMX swap target)
+   ---------------------------------------------------------------- */
+.register-success {
+  border-left: 4px solid var(--fg-granted);
+  padding: 1rem 1.25rem;
+  background: var(--fg-card);
+  border-radius: 6px;
+}
+.register-error {
+  border-left: 4px solid var(--fg-denied);
+  padding: 1rem 1.25rem;
+  background: var(--fg-card);
+  border-radius: 6px;
+}
 
 /* Compact buttons */
-button.small, .button.small { padding: 0.2rem 0.6rem; font-size: 0.8rem; }
+button.small,
+.button.small {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+}
 
-/* Grid layout for dashboard / register */
+/* ----------------------------------------------------------------
+   Grid layout — dashboard / register / user-detail
+   ---------------------------------------------------------------- */
 .grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -128,26 +198,28 @@ button.small, .button.small { padding: 0.2rem 0.6rem; font-size: 0.8rem; }
   .grid { grid-template-columns: 1fr; }
 }
 
-
-/* Badges for user type */
+/* ----------------------------------------------------------------
+   Badges for user type
+   ---------------------------------------------------------------- */
 .badge {
   display: inline-block;
-  padding: 0.15rem 0.5rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 .badge.perm {
-  background: rgba(33, 150, 243, 0.15);
+  background: rgba(33, 150, 243, 0.14);
   color: #1976d2;
 }
 .badge.temp {
-  background: rgba(255, 152, 0, 0.15);
-  color: #e65100;
+  background: rgba(255, 152, 0, 0.16);
+  color: #d84315;
 }
 
 /* Compact tables (used on the user-detail logs panel) */
 table.compact { font-size: 0.85rem; }
-table.compact td, table.compact th { padding: 0.3rem 0.5rem; }
+table.compact td,
+table.compact th { padding: 0.35rem 0.5rem; }
