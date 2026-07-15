@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 import cv2
-import mediapipe as mp
+import onnxruntime as ort 
 import numpy as np
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
@@ -27,7 +27,10 @@ from insightface.app import FaceAnalysis
 
 # --- Globals ---
 face_app = None
-mp_face_mesh = None
+
+pfld_session = None
+pfld_input_name = None
+pfld_output_name = None
 
 _frame_lock = threading.Lock()
 latest_frame: bytes | None = None
@@ -47,7 +50,9 @@ MIN_OPEN_AFTER = 2
 REQUIRED_BLINKS = 2           
 BLINK_WINDOW = 5.0            
 LIVENESS_TTL_SECONDS = 3.0    
-MAX_EAR_HISTORY = 150         
+MAX_EAR_HISTORY = 150
+FACE_MESH_EVERY_N = 1
+_face_mesh_counter = 0        
 
 # Face stability relaxed
 MAX_FACE_JITTER = 25         
@@ -58,8 +63,8 @@ liveness_valid_until = 0.0
 _last_bbox: tuple[float, float, float, float] | None = None
 _stable_frame_count = 0
 
-RIGHT_EYE_IDX = [362, 385, 387, 263, 373, 380]
-LEFT_EYE_IDX = [33, 160, 158, 133, 153, 144]
+LEFT_EYE_IDX = [36, 37, 38, 39, 40, 41]
+RIGHT_EYE_IDX = [42, 43, 44, 45, 46, 47]
 
 # --- Cached inference ---
 _inference_lock = threading.Lock()
@@ -99,18 +104,24 @@ def _bbox_jitter(bbox1, bbox2):
 
 
 def init_model():
-    global face_app, mp_face_mesh
+    global face_app, pfld_session, pfld_input_name, pfld_output_name
 
     face_app = FaceAnalysis(name="buffalo_sc", root="./models")
-    face_app.prepare(ctx_id=-1, det_size=(320, 320))
+    face_app.prepare(ctx_id=-1, det_size=(160, 160))
 
-    mp_face_mesh_module = mp.solutions.face_mesh
-    mp_face_mesh = mp_face_mesh_module.FaceMesh(
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
+    # --- PFLD ONNX ---
+    model_path = "./models/pfld.onnx"
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(
+            f"PFLD model not found: {model_path}. "
+            f"Скачай вручную: https://github.com/cunjian/pytorch_face_landmark"
+        )
+
+    pfld_session = ort.InferenceSession(
+        model_path, providers=["CPUExecutionProvider"]
     )
+    pfld_input_name = pfld_session.get_inputs()[0].name
+    pfld_output_name = pfld_session.get_outputs()[0].name
 
 
 def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
@@ -164,12 +175,45 @@ def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
 
     return blinks
 
+def _preprocess_pfld(crop: np.ndarray) -> np.ndarray:
+    img = cv2.resize(crop, (112, 112))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.astype(np.float32) / 255.0
+    img = (img - 0.5) / 0.5              
+    img = np.transpose(img, (2, 0, 1))
+    return np.expand_dims(img, axis=0) 
+
+
+def _get_pfld_landmarks(frame: np.ndarray, bbox: np.ndarray) -> np.ndarray | None:
+    if pfld_session is None:
+        return None
+
+    x1, y1, x2, y2 = bbox.astype(int)
+    h, w = frame.shape[:2]
+
+    margin = int(max(x2 - x1, y2 - y1) * 0.2)
+    x1, y1 = max(0, x1 - margin), max(0, y1 - margin)
+    x2, y2 = min(w, x2 + margin), min(h, y2 + margin)
+
+    crop = frame[y1:y2, x1:x2]
+    if crop.size == 0:
+        return None
+
+    input_blob = _preprocess_pfld(crop)
+    outputs = pfld_session.run([pfld_output_name], {pfld_input_name: input_blob})
+    landmarks = outputs[0].reshape(-1, 2) 
+
+    crop_h, crop_w = crop.shape[:2]
+    landmarks[:, 0] = landmarks[:, 0] / 112.0 * crop_w + x1
+    landmarks[:, 1] = landmarks[:, 1] / 112.0 * crop_h + y1
+
+    return landmarks
 
 def run_inference(frame: np.ndarray) -> dict:
     global liveness_valid_until, cached_faces, cached_landmarks, cached_status
     global _last_bbox, _stable_frame_count
+    global _face_mesh_counter 
 
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     h_img, w_img, _ = frame.shape
     current_time = time.time()
 
@@ -202,38 +246,40 @@ def run_inference(frame: np.ndarray) -> dict:
             _stable_frame_count = max(0, _stable_frame_count - 2)
     _last_bbox = bbox_tuple
 
-    mp_results = mp_face_mesh.process(rgb_frame)
-    landmarks = None
-    if mp_results.multi_face_landmarks:
-        landmarks = np.array(
-            [[lm.x * w_img, lm.y * h_img] for lm in mp_results.multi_face_landmarks[0].landmark]
-        )
 
-    ear_avg = 0.0
     is_live = current_time < liveness_valid_until
+    landmarks = None
+    ear_avg = 0.0
+    blink_count = 0
+    status_extra = ""
 
-    if landmarks is not None:
-        ear_left = _calculate_ear(landmarks, LEFT_EYE_IDX)
-        ear_right = _calculate_ear(landmarks, RIGHT_EYE_IDX)
-        ear_avg = (ear_left + ear_right) / 2.0
-        ear_history.append((current_time, ear_avg))
+    need_landmarks = face_stable and not is_live
 
-        while ear_history and current_time - ear_history[0][0] > 6.0:
-            ear_history.popleft()
+    if need_landmarks:
+        _face_mesh_counter += 1
+        if _face_mesh_counter >= FACE_MESH_EVERY_N:
+            _face_mesh_counter = 0
+            landmarks = _get_pfld_landmarks(frame, primary.bbox)
 
-        # Count blinks regardless of stability, but require stability to pass
-        blink_count = _count_valid_blinks(ear_history, current_time)
+            if landmarks is not None:
+                ear_left = _calculate_ear(landmarks, LEFT_EYE_IDX)
+                ear_right = _calculate_ear(landmarks, RIGHT_EYE_IDX)
+                ear_avg = (ear_left + ear_right) / 2.0
+                ear_history.append((current_time, ear_avg))
 
-        # Debug: show blink count and stability on screen
-        status_extra = f" B:{blink_count} S:{_stable_frame_count}"
+                while ear_history and current_time - ear_history[0][0] > 6.0:
+                    ear_history.popleft()
 
-        if face_stable and blink_count >= REQUIRED_BLINKS:
-            liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
-            is_live = True
+                blink_count = _count_valid_blinks(ear_history, current_time)
+                status_extra = f" B:{blink_count} S:{_stable_frame_count}"
 
-        is_live = current_time < liveness_valid_until
+                if blink_count >= REQUIRED_BLINKS:
+                    liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
+                    is_live = True
     else:
-        status_extra = ""
+        _face_mesh_counter = 0
+        if not face_stable and not is_live:
+            status_extra = f" S:{_stable_frame_count}"
 
     status_text = "ACCESS GRANTED" if is_live else "LOCKED"
     color = (0, 255, 0) if is_live else (0, 0, 255)
@@ -301,11 +347,15 @@ def draw_frame(frame: np.ndarray) -> np.ndarray:
             ear_left = _calculate_ear(landmarks, LEFT_EYE_IDX)
             ear_right = _calculate_ear(landmarks, RIGHT_EYE_IDX)
             ear_avg = (ear_left + ear_right) / 2.0
-            cv2.putText(
-                display, f"EAR:{ear_avg:.2f}",
-                (bbox[0], bbox[1] + 20),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1,
-            )
+            if ear_avg > 0:
+                cv2.putText(
+                    display, f"EAR:{ear_avg:.2f}",
+                    (bbox[0], bbox[1] + 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1,
+                )
+            for idx in LEFT_EYE_IDX + RIGHT_EYE_IDX:
+                x, y = int(landmarks[idx][0]), int(landmarks[idx][1])
+                cv2.circle(display, (x, y), 1, (0, 255, 255), -1)
 
     return display
 
@@ -415,8 +465,6 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=inference_thread, daemon=True, name="inference").start()
     threading.Thread(target=stream_thread, daemon=True, name="stream").start()
     yield
-    if mp_face_mesh:
-        mp_face_mesh.close()
 
 
 app = FastAPI(title="FaceGuard ML Service", version="2.8.0", lifespan=lifespan)
