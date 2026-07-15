@@ -2,69 +2,74 @@
 {% block title %}Users — FaceGuard{% endblock %}
 
 {% block content %}
-<header>
-  <h2>Users &amp; Guests</h2>
-  <p class="muted">
-    Permanent users ({{ users|length }}) · Active guests ({{ guests|length }})
-    · <a href="/register">+ Register new</a>
-  </p>
-</header>
+<div class="page-fill">
+  <div class="section-header">
+    <p class="muted small">Permanent ({{ users|length }}) · Guests ({{ guests|length }})</p>
+    <a href="/register" class="button small">+ Register</a>
+  </div>
 
-<section>
-  <h3>Permanent users</h3>
-  {% if users %}
-  <table>
-    <thead>
-      <tr><th>ID</th><th>Name</th><th>Registered</th><th></th></tr>
-    </thead>
-    <tbody>
-      {% for u in users %}
-      <tr>
-        <td>{{ u.id }}</td>
-        <td><a href="/users/{{ u.id }}">{{ u.name }}</a></td>
-        <td>{{ u.created_at|localdt }}</td>
-        <td>
-          <form method="post" action="/users/{{ u.id }}/delete"
-                onsubmit="return confirm('Delete user {{ u.name|e }}?');"
-                style="margin:0">
-            <button class="outline secondary small" type="submit">Delete</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">No permanent users yet. <a href="/register">Register one</a>.</p>
-  {% endif %}
-</section>
+  <div class="grid grid-1-1">
+    <section class="page-fill">
+      <h3>Permanent</h3>
+      <div class="table-wrap">
+        {% if users %}
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Registered</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr>
+              <td>{{ u.id }}</td>
+              <td><a href="/users/{{ u.id }}">{{ u.name }}</a></td>
+              <td>{{ u.created_at|localdt }}</td>
+              <td>
+                <form method="post" action="/users/{{ u.id }}/delete"
+                      onsubmit="return confirm('Delete user {{ u.name|e }}?');"
+                      style="margin:0">
+                  <button class="outline secondary small" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted small" style="padding:0.5rem">No permanent users.</p>
+        {% endif %}
+      </div>
+    </section>
 
-<section>
-  <h3>Active guests</h3>
-  {% if guests %}
-  <table>
-    <thead>
-      <tr><th>ID</th><th>Name</th><th>Expires</th><th></th></tr>
-    </thead>
-    <tbody>
-      {% for g in guests %}
-      <tr>
-        <td>{{ g.id }}</td>
-        <td><a href="/users/{{ g.id }}">{{ g.name }}</a></td>
-        <td>{{ g.expires_at|localdt }}</td>
-        <td>
-          <form method="post" action="/users/{{ g.id }}/delete"
-                onsubmit="return confirm('Revoke guest {{ g.name|e }}?');"
-                style="margin:0">
-            <button class="outline secondary small" type="submit">Revoke</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">No active guests.</p>
-  {% endif %}
-</section>
+    <section class="page-fill">
+      <h3>Guests</h3>
+      <div class="table-wrap">
+        {% if guests %}
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Expires</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for g in guests %}
+            <tr>
+              <td>{{ g.id }}</td>
+              <td><a href="/users/{{ g.id }}">{{ g.name }}</a></td>
+              <td>{{ g.expires_at|localdt }}</td>
+              <td>
+                <form method="post" action="/users/{{ g.id }}/delete"
+                      onsubmit="return confirm('Revoke guest {{ g.name|e }}?');"
+                      style="margin:0">
+                  <button class="outline secondary small" type="submit">Revoke</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted small" style="padding:0.5rem">No active guests.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</div>
 {% endblock %}

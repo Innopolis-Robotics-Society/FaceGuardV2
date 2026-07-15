@@ -2,59 +2,56 @@
 {% block title %}Logs — FaceGuard{% endblock %}
 
 {% block content %}
-<header>
-  <h2>Access log</h2>
-  <form method="get" action="/logs" class="grid">
+<div class="page-fill">
+  <form method="get" action="/logs" class="filter-bar">
     <label>
-      Filter by name
-      <input type="text" name="q" value="{{ query }}" placeholder="substring match">
+      Filter
+      <input type="text" name="q" value="{{ query }}" placeholder="name…">
     </label>
     <label>
       <input type="checkbox" name="today" {% if today_filter %}checked{% endif %}>
-      Today only
+      Today
     </label>
     <div>
-      <button type="submit" class="outline">Apply</button>
-      <a href="/logs" class="button secondary outline">Reset</a>
+      <button type="submit" class="outline small">Apply</button>
+      <a href="/logs" class="button secondary outline small">Reset</a>
     </div>
   </form>
-</header>
 
-<section>
-  {% if entries %}
-  <table>
-    <thead>
-      <tr>
-        <th>Time</th>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Score</th>
-        <th>Liveness</th>
-        <th>Result</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for e in entries %}
-      <tr class="log-row {% if e.success %}log-ok{% else %}log-denied{% endif %}">
-        <td>{{ e.timestamp|localdt('%Y-%m-%d %H:%M:%S') }}</td>
-        <td>{{ e.name }}</td>
-        <td>{{ e.access_type }}</td>
-        <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
-        <td>
-          {% if e.liveness_passed is none %}—
-          {% elif e.liveness_passed %}✓ passed
-          {% else %}✗ failed
-          {% endif %}
-        </td>
-        <td>
-          {% if e.success %}✓ granted{% else %}✗ denied{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">No log entries match the filter.</p>
-  {% endif %}
-</section>
+  <div class="table-wrap">
+    {% if entries %}
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Score</th>
+          <th>Liveness</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr class="log-row {% if e.success %}log-ok{% else %}log-denied{% endif %}">
+          <td>{{ e.timestamp|localdt('%m-%d %H:%M:%S') }}</td>
+          <td>{{ e.name }}</td>
+          <td>{{ e.access_type }}</td>
+          <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
+          <td>
+            {% if e.liveness_passed is none %}—
+            {% elif e.liveness_passed %}✓
+            {% else %}✗
+            {% endif %}
+          </td>
+          <td>{% if e.success %}✓ granted{% else %}✗ denied{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted small" style="padding:0.75rem">No log entries match the filter.</p>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

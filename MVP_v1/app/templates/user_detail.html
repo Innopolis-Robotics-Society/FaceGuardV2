@@ -2,125 +2,123 @@
 {% block title %}{{ user.name }} — FaceGuard{% endblock %}
 
 {% block content %}
-<header>
-  <h2>{{ user.name }}</h2>
-  <p class="muted">
-    ID #{{ user.id }} ·
-    <a href="/users">&larr; back to user list</a>
-  </p>
-</header>
+<div class="page-fill">
+  <div class="section-header">
+    <h2>{{ user.name }}</h2>
+    <a href="/users" class="button outline secondary small">&larr; Back</a>
+  </div>
 
-<div class="grid">
-  <section>
-    <h3>Details</h3>
-    <table>
-      <tbody>
-        <tr><td>Name</td><td>{{ user.name }}</td></tr>
-        <tr>
-          <td>Type</td>
-          <td>
-            {% if user.type == 'temporary' %}
-              <span class="badge temp">temporary</span>
-            {% else %}
-              <span class="badge perm">permanent</span>
-            {% endif %}
-          </td>
-        </tr>
-        <tr>
-          <td>Expires</td>
-          <td>
-            {% if user.expires_at %}
-              {{ user.expires_at|localdt('%Y-%m-%d %H:%M') }}
-            {% else %}
-              <span class="muted">—</span>
-            {% endif %}
-          </td>
-        </tr>
-        <tr>
-          <td>Created</td>
-          <td>{{ user.created_at|localdt('%Y-%m-%d %H:%M') }}</td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="grid grid-1-2">
+    <section class="page-fill">
+      <h3>Edit</h3>
+      <div style="overflow-y:auto; min-height:0; flex:1;">
+        <table>
+          <tbody>
+            <tr><td>Name</td><td>{{ user.name }}</td></tr>
+            <tr>
+              <td>Type</td>
+              <td>
+                {% if user.type == 'temporary' %}
+                  <span class="badge temp">temporary</span>
+                {% else %}
+                  <span class="badge perm">permanent</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td>Expires</td>
+              <td>
+                {% if user.expires_at %}
+                  {{ user.expires_at|localdt('%Y-%m-%d %H:%M') }}
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td>Created</td>
+              <td>{{ user.created_at|localdt('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+          </tbody>
+        </table>
 
-    <h3>Edit</h3>
-    <form method="post" action="/users/{{ user.id }}/update">
-      <label>
-        Full name
-        <input type="text" name="name" value="{{ user.name }}" required>
-      </label>
+        <form method="post" action="/users/{{ user.id }}/update" style="margin-top:0.5rem;">
+          <label>
+            Full name
+            <input type="text" name="name" value="{{ user.name }}" required>
+          </label>
 
-      <fieldset>
-        <legend>Access type</legend>
-        <label>
-          <input type="radio" name="type" value="permanent"
-                 {% if user.type == 'permanent' %}checked{% endif %}
-                 id="radio-permanent">
-          Permanent
-        </label>
-        <label>
-          <input type="radio" name="type" value="temporary"
-                 {% if user.type == 'temporary' %}checked{% endif %}
-                 id="radio-temporary">
-          Temporary
-        </label>
-      </fieldset>
+          <fieldset>
+            <legend>Access type</legend>
+            <label>
+              <input type="radio" name="type" value="permanent"
+                     {% if user.type == 'permanent' %}checked{% endif %}
+                     id="radio-permanent">
+              <span>Permanent</span>
+            </label>
+            <label>
+              <input type="radio" name="type" value="temporary"
+                     {% if user.type == 'temporary' %}checked{% endif %}
+                     id="radio-temporary">
+              <span>Temporary</span>
+            </label>
+          </fieldset>
 
-      <label id="expires-field"
-             {% if user.type != 'temporary' %}style="display:none"{% endif %}>
-        Expiration date
-        <input type="datetime-local" name="expires_at"
-               {% if user.expires_at %}
-               value="{{ user.expires_at|localdt('%Y-%m-%dT%H:%M') }}"
-               {% endif %}
-               id="expires-input">
-        <small class="muted">Local time. Calendar picker with HH:MM precision.</small>
-      </label>
+          <label id="expires-field"
+                 {% if user.type != 'temporary' %}style="display:none"{% endif %}>
+            Expiration date
+            <input type="datetime-local" name="expires_at"
+                   {% if user.expires_at %}
+                   value="{{ user.expires_at|localdt('%Y-%m-%dT%H:%M') }}"
+                   {% endif %}
+                   id="expires-input">
+            <small class="muted">Local time. Calendar with HH:MM precision.</small>
+          </label>
 
-      <button type="submit">Save changes</button>
-      <a href="/users" class="button outline secondary">Cancel</a>
-    </form>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            <button type="submit">Save</button>
+            <form method="post" action="/users/{{ user.id }}/delete"
+                  onsubmit="return confirm('Delete user {{ user.name|e }}?');"
+                  style="margin:0">
+              <button class="outline contrast small" type="submit">Delete</button>
+            </form>
+          </div>
+        </form>
+      </div>
+    </section>
 
-    <h3>Danger zone</h3>
-    <form method="post" action="/users/{{ user.id }}/delete"
-          onsubmit="return confirm('Delete user {{ user.name|e }}? This cannot be undone.');"
-          style="margin:0">
-      <button class="outline contrast" type="submit">Delete user</button>
-    </form>
-  </section>
-
-  <aside>
-    <h3>Recent activity</h3>
-    {% if logs %}
-    <table class="compact">
-      <thead>
-        <tr><th>Time</th><th>Result</th><th>Score</th></tr>
-      </thead>
-      <tbody>
-        {% for e in logs %}
-        <tr class="{% if e.success %}log-ok{% else %}log-denied{% endif %}">
-          <td>{{ e.timestamp|localdt('%Y-%m-%d %H:%M:%S') }}</td>
-          <td>
-            {% if e.success %}✓ granted{% else %}✗ denied{% endif %}
-            <br><small class="muted">{{ e.access_type }}</small>
-          </td>
-          <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <p class="muted small">Showing last {{ logs|length }} entries for "{{ user.name }}".</p>
-    {% else %}
-    <p class="muted">No activity logged for this user yet.</p>
-    {% endif %}
-  </aside>
+    <section class="page-fill">
+      <h3>Activity</h3>
+      <div class="table-wrap">
+        {% if logs %}
+        <table class="compact">
+          <thead>
+            <tr><th>Time</th><th>Result</th><th>Score</th></tr>
+          </thead>
+          <tbody>
+            {% for e in logs %}
+            <tr class="{% if e.success %}log-ok{% else %}log-denied{% endif %}">
+              <td>{{ e.timestamp|localdt('%m-%d %H:%M:%S') }}</td>
+              <td>
+                {% if e.success %}✓{% else %}✗{% endif %}
+                <span class="muted">{{ e.access_type }}</span>
+              </td>
+              <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted small" style="padding:0.5rem">No activity yet.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // Toggle visibility of the expiration field based on access type.
-  // Runs only on the user-detail page.
   (function () {
     var perm = document.getElementById('radio-permanent');
     var temp = document.getElementById('radio-temporary');

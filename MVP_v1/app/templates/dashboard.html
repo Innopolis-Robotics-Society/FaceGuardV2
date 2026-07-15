@@ -2,21 +2,15 @@
 {% block title %}Dashboard — FaceGuard{% endblock %}
 
 {% block content %}
-<header>
-  <h2>Live Dashboard</h2>
-  <p class="muted">Real-time camera feed and access verdict.</p>
-</header>
-
-<div class="grid">
-  <section class="camera-panel">
-    <h3>Camera</h3>
-<div class="video-wrap">
-  <img id="camera-feed" src="/stream" alt="Live camera stream">
-  <div id="verdict-overlay" class="verdict-overlay idle">
-    <span id="verdict-text">Waiting for face...</span>
-    <small id="verdict-meta"></small>
-  </div>
-</div>
+<div class="grid grid-2-1">
+  <section style="min-height:0; overflow:hidden;">
+    <div class="video-wrap">
+      <img id="camera-feed" src="/stream" alt="Live camera stream">
+      <div id="verdict-overlay" class="verdict-overlay idle">
+        <span id="verdict-text">Waiting for face...</span>
+        <small id="verdict-meta"></small>
+      </div>
+    </div>
   </section>
 
   <aside class="status-panel">

@@ -2,60 +2,47 @@
 {% block title %}Register — FaceGuard{% endblock %}
 
 {% block content %}
-<header>
-  <h2>Register a new person</h2>
-  <p class="muted">
-    The camera will capture {{ frame_count }} frames in real time and
-    average their embeddings before saving. Make sure the person is
-    facing the camera before submitting.
-  </p>
-</header>
-
-<div class="grid">
-  <section>
-    <h3>Live preview</h3>
+<div class="grid grid-2-1">
+  <section style="min-height:0; overflow:hidden;">
     <div class="video-wrap">
       <img id="camera-feed" src="/stream" alt="Live camera stream">
     </div>
-    <p class="muted small">Preview only — actual frames are captured server-side.</p>
   </section>
 
-  <aside>
-    <h3>Registration form</h3>
+  <aside class="page-fill">
+    <h3>New person</h3>
     <form id="register-form"
           hx-post="/register"
           hx-target="#register-result"
           hx-swap="innerHTML"
-          hx-disabled-elt="#submit-btn">
+          hx-disabled-elt="#submit-btn"
+          style="display:flex; flex-direction:column; gap:0;">
       <label>
-        Full name (Surname Firstname)
+        Full name
         <input type="text" name="name" required
-               placeholder="e.g. Ivanov Petr">
+               placeholder="Surname Firstname">
       </label>
 
       <fieldset>
-        <legend>Access type</legend>
+        <legend>Access</legend>
         <label>
           <input type="radio" name="access_type" value="permanent" checked
                  hx-get="/register/options/permanent" hx-target="#guest-options"
                  hx-swap="innerHTML">
-          Permanent
+          <span>Permanent</span>
         </label>
         <label>
           <input type="radio" name="access_type" value="temporary"
                  hx-get="/register/options/temporary" hx-target="#guest-options"
                  hx-swap="innerHTML">
-          Temporary
+          <span>Temporary</span>
         </label>
       </fieldset>
 
       <div id="guest-options"></div>
 
       <button id="submit-btn" type="submit">Capture &amp; register</button>
-      <small class="muted">
-        Captures {{ frame_count }} frames at ~0.4s intervals. The form will
-        be disabled for ~2 seconds.
-      </small>
+      <small class="muted">{{ frame_count }} frames at ~0.4s intervals.</small>
     </form>
 
     <div id="register-result"></div>

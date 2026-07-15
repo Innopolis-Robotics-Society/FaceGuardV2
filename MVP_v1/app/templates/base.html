@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,18 +9,18 @@
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 <body>
-  <nav class="container-fluid topnav">
+  <nav class="topnav">
     <ul>
       <li><strong>FaceGuard</strong></li>
-    </ul>
-    <ul>
       <li><a href="/">Dashboard</a></li>
       <li><a href="/users">Users</a></li>
       <li><a href="/register">Register</a></li>
       <li><a href="/logs">Logs</a></li>
+    </ul>
+    <ul style="margin-left:auto">
       <li>
         <form method="post" action="/logout" style="margin:0">
-          <button class="outline secondary" type="submit">Logout</button>
+          <button class="outline secondary small" type="submit">Logout</button>
         </form>
       </li>
     </ul>
