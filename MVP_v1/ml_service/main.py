@@ -43,20 +43,20 @@ _fps_stream = 0
 _fps_inference = 0
 
 # --- Passive Liveness Config ---
-EAR_THRESHOLD = 0.18          
-CONSECUTIVE_CLOSED = 1        
-MIN_OPEN_BEFORE = 2           
-MIN_OPEN_AFTER = 2            
-REQUIRED_BLINKS = 2           
-BLINK_WINDOW = 5.0            
-LIVENESS_TTL_SECONDS = 3.0    
+EAR_THRESHOLD = 0.37
+CONSECUTIVE_CLOSED = 1
+MIN_OPEN_BEFORE = 1
+MIN_OPEN_AFTER = 1
+REQUIRED_BLINKS = 2
+BLINK_WINDOW = 5.0
+LIVENESS_TTL_SECONDS = 3.0
 MAX_EAR_HISTORY = 150
 FACE_MESH_EVERY_N = 1
 _face_mesh_counter = 0        
 
 # Face stability relaxed
-MAX_FACE_JITTER = 25         
-STABLE_FRAMES_REQUIRED = 3    
+MAX_FACE_JITTER = 25
+STABLE_FRAMES_REQUIRED = 3
 
 ear_history: deque[tuple[float, float]] = deque(maxlen=MAX_EAR_HISTORY)
 liveness_valid_until = 0.0
@@ -138,7 +138,7 @@ def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
 
 def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
     recent = [(t, e) for t, e in history if now - t <= BLINK_WINDOW]
-    if len(recent) < 6:
+    if len(recent) < 3:
         return 0
 
     blinks = 0
@@ -150,10 +150,9 @@ def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
             i += 1
         open_len = i - open_start
         if open_len < MIN_OPEN_BEFORE:
-            i += 1
             continue
 
-        # Phase 2: eyes closed (1+ frames)
+        # Phase 2: eyes closed
         closed_start = i
         while i < len(recent) and recent[i][1] < EAR_THRESHOLD:
             i += 1
@@ -276,6 +275,10 @@ def run_inference(frame: np.ndarray) -> dict:
                 if blink_count >= REQUIRED_BLINKS:
                     liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
                     is_live = True
+
+                print(f"[LIVENESS] stable:{face_stable}({(_stable_frame_count)}) | "
+                      f"EAR:{ear_avg:.3f} L:{ear_left:.3f} R:{ear_right:.3f} | "
+                      f"blinks:{blink_count} | live:{is_live}", flush=True)
     else:
         _face_mesh_counter = 0
         if not face_stable and not is_live:
@@ -418,10 +421,16 @@ def capture_thread():
 def inference_thread():
     global latest_result, _fps_inference
     fps_window: list[float] = []
+    no_face_skip = 0
 
     while True:
         frame = capture_queue.get()
         now = time.time()
+        if latest_result.get("status") == "NO_FACE":
+            no_face_skip += 1
+            if no_face_skip < 3:
+                continue
+            no_face_skip = 0
 
         try:
             result = run_inference(frame)
