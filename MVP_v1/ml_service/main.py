@@ -43,16 +43,16 @@ _fps_stream = 0
 _fps_inference = 0
 
 # --- Passive Liveness Config ---
-EAR_THRESHOLD = 0.37
+EAR_THRESHOLD = 0.30
 CONSECUTIVE_CLOSED = 1
 MIN_OPEN_BEFORE = 1
 MIN_OPEN_AFTER = 1
-REQUIRED_BLINKS = 2
+REQUIRED_BLINKS = 1
 BLINK_WINDOW = 5.0
 LIVENESS_TTL_SECONDS = 3.0
 MAX_EAR_HISTORY = 150
 FACE_MESH_EVERY_N = 1
-_face_mesh_counter = 0        
+_face_mesh_counter = 0
 
 # Face stability relaxed
 MAX_FACE_JITTER = 25
@@ -114,7 +114,7 @@ def init_model():
     if not os.path.exists(model_path):
         raise FileNotFoundError(
             f"PFLD model not found: {model_path}. "
-            f"Скачай вручную: https://github.com/cunjian/pytorch_face_landmark"
+            f"Download manually: https://github.com/cunjian/pytorch_face_landmark"
         )
 
     pfld_session = ort.InferenceSession(
@@ -228,6 +228,7 @@ def run_inference(frame: np.ndarray) -> dict:
         ear_history.clear()
         _last_bbox = None
         _stable_frame_count = 0
+        time.sleep(0.05)
         return {"timestamp": _now_iso(), "faces": [], "status": "NO_FACE"}
 
     primary = faces[0]
@@ -276,10 +277,6 @@ def run_inference(frame: np.ndarray) -> dict:
                 if blink_count >= REQUIRED_BLINKS:
                     liveness_valid_until = current_time + LIVENESS_TTL_SECONDS
                     is_live = True
-
-                print(f"[LIVENESS] stable:{face_stable}({(_stable_frame_count)}) | "
-                      f"EAR:{ear_avg:.3f} L:{ear_left:.3f} R:{ear_right:.3f} | "
-                      f"blinks:{blink_count} | live:{is_live}", flush=True)
     else:
         _face_mesh_counter = 0
         if not face_stable and not is_live:
@@ -370,7 +367,7 @@ def capture_thread():
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
-    cap.set(cv2.CAP_PROP_FPS, 30)
+    cap.set(cv2.CAP_PROP_FPS, 24)
 
     if not cap.isOpened():
         raise RuntimeError("Cannot open camera")
@@ -429,7 +426,7 @@ def inference_thread():
         now = time.time()
         if latest_result.get("status") == "NO_FACE":
             no_face_skip += 1
-            if no_face_skip < 3:
+            if no_face_skip < 4:
                 continue
             no_face_skip = 0
 
