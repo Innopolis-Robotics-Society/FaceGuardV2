@@ -28,12 +28,12 @@ so the admin can see what the camera sees from their laptop.
 ### States
 
 A single recognition **verdict** (`idle` / `liveness_check` / `granted` /
-`denied` / `error`) drives three separate visual indicators on the
-dashboard at once: the camera overlay text, the "Door" status field, and
-the "Servo" status field. They read the same event but don't carry the
-same level of detail — the tables below give the exact text/colour for
-each, side by side, since that's easy to lose track of when reading the
-three UI elements separately.
+`denied`) drives three separate visual indicators on the dashboard at
+once: the camera overlay text, the "Door" status field, and the "Servo"
+status field. They read the same event but don't carry the same level of
+detail — the tables below give the exact text/colour for each, side by
+side, since that's easy to lose track of when reading the three UI
+elements separately.
 
 > Note: a `scanning` CSS class and colour also exist in the stylesheet
 > from an earlier design, but the recognition loop never actually emits
@@ -48,7 +48,6 @@ three UI elements separately.
 | `liveness_check` | `Liveness check: please blink` | `{name} · score {score:.3f}` | Yellow |
 | `granted` | `Access granted: {Name}` | `{access_type} · score {score:.3f}` | Green |
 | `denied` | `Access denied` | `score {score:.3f}` | Red |
-| `error` | `System error` | short diagnostic (e.g. `ML service unreachable`) | Dark red |
 
 #### 1.2 Door status (dashboard status panel, "Door" row)
 
@@ -58,7 +57,6 @@ three UI elements separately.
 | `liveness_check` | `Locked` | Yellow |
 | `denied` | `Locked` | Red |
 | `granted` | `Opened` | Green |
-| `error` | `—` | *(known issue: colour is not reset from whatever the previous verdict left it at — see below)* |
 
 #### 1.3 Servo status (dashboard status panel, "Servo" row)
 
@@ -66,21 +64,12 @@ three UI elements separately.
 |---|---|---|
 | `idle`, `denied`, `liveness_check` | `Idle` | Grey |
 | `granted` | `Triggered` | Grey — **unchanged from `Idle`; the servo field carries no colour coding at all today**, unlike the door status and camera overlay above. |
-| `error` | `—` | Grey |
 
 The servo field only ever reports the mechanical actuator's own state
 (idle vs. actuated) rather than the semantic access decision, which is
-why it doesn't need the same 4/5-way colour split as the door status and
-camera overlay — those two describe *why* the door is locked or open,
-while the servo field describes *what the motor is physically doing*.
-
-#### Known issue: stale door-status colour on error
-
-When an `error` verdict follows a `granted` or `denied` verdict, the door
-status text resets to `—` but its colour is not reset in
-[`dashboard.js`](../MVP_v1/app/static/dashboard.js) — so it can stay
-green or red instead of reverting to a neutral colour. Worth fixing
-alongside any other UI work that touches this area.
+why it doesn't need the same colour split as the door status and camera
+overlay — those two describe *why* the door is locked or open, while the
+servo field describes *what the motor is physically doing*.
 
 ### Mockups
 

@@ -20,7 +20,6 @@ The dashboard is the main screen, showing:
   | Liveness check | Yellow — `Liveness check: please blink` | A match was found; waiting for a blink before granting access (only when liveness is enabled). |
   | Granted | Green — `Access granted: <Name>` | Match found above threshold (and liveness passed, if enabled). Door unlocks. |
   | Denied | Red — `Access denied` | Face detected but no match above threshold. Door stays locked. |
-  | Error | Dark red — `System error` | ML service unreachable or the recognition loop crashed. Check the status panel. |
 
 - **Status panel**, showing: ML service health (online/offline), door state, last recognized user and score, counts of permanent users/active guests/log entries, and current servo state.
 
