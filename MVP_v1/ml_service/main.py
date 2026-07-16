@@ -1,16 +1,21 @@
-"""Optimized ML service for FaceGuard — relaxed passive liveness."""
+"""ML service for FaceGuard.
+
+Runs on the Raspberry Pi or a laptop. Captures frames from the camera,
+runs InsightFace for face detection + 512-dim embeddings, and runs
+MediaPipe Face Mesh for passive liveness detection (blink counting via
+Eye-Aspect Ratio). Annotated frames are served as an MJPEG stream and
+the latest face data is exposed as JSON for the backend to consume.
+
+Threads:
+  - capture_thread   : reads frames from the camera into a queue.
+  - inference_thread : runs face detection + liveness, publishes JSON.
+  - stream_thread    : draws annotations, encodes JPEG for the MJPEG feed.
+"""
 
 from __future__ import annotations
 
-import os
-os.environ["OMP_NUM_THREADS"] = "2"
-os.environ["OPENBLAS_NUM_THREADS"] = "2"
-os.environ["MKL_NUM_THREADS"] = "2"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "2"
-os.environ["NUMEXPR_NUM_THREADS"] = "2"
-os.environ["ONNXRUNTIME_CPU_NUM_THREADS"] = "2"
-
 import asyncio
+import os
 import queue
 import threading
 import time
@@ -34,9 +39,8 @@ pfld_output_name = None
 
 _frame_lock = threading.Lock()
 latest_frame: bytes | None = None
-latest_result = {"timestamp": "", "faces": []}
+latest_result: dict = {"timestamp": "", "faces": []}
 
-# --- FPS Globals ---
 _fps_lock = threading.Lock()
 _fps_capture = 0
 _fps_stream = 0
@@ -66,17 +70,14 @@ _stable_frame_count = 0
 LEFT_EYE_IDX = [36, 37, 38, 39, 40, 41]
 RIGHT_EYE_IDX = [42, 43, 44, 45, 46, 47]
 
-# --- Cached inference ---
 _inference_lock = threading.Lock()
-cached_faces = []
-cached_landmarks = None
-cached_status = ("NO FACE", (128, 128, 128))
+cached_faces: list = []
+cached_landmarks: np.ndarray | None = None
+cached_status: tuple[str, tuple[int, int, int]] = ("NO FACE", (128, 128, 128))
 
-# --- Queues ---
-capture_queue = queue.Queue(maxsize=1)
-display_queue = queue.Queue(maxsize=2)
+capture_queue: queue.Queue = queue.Queue(maxsize=1)
+display_queue: queue.Queue = queue.Queue(maxsize=2)
 
-# --- Stream output size ---
 STREAM_W, STREAM_H = 240, 180
 STREAM_QUALITY = 40
 
@@ -125,6 +126,7 @@ def init_model():
 
 
 def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
+    """Eye-Aspect Ratio — small when the eye is closed."""
     if landmarks is None or len(landmarks) < max(eye_idx) + 1:
         return 0.0
     pts = landmarks[eye_idx]
@@ -137,6 +139,7 @@ def _calculate_ear(landmarks: np.ndarray, eye_idx: list[int]) -> float:
 
 
 def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
+    """Count valid blink events (open → closed → open) in the recent window."""
     recent = [(t, e) for t, e in history if now - t <= BLINK_WINDOW]
     if len(recent) < 3:
         return 0
@@ -144,7 +147,7 @@ def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
     blinks = 0
     i = 0
     while i < len(recent):
-        # Phase 1: eyes open
+        # Phase 1: eyes open.
         open_start = i
         while i < len(recent) and recent[i][1] >= EAR_THRESHOLD:
             i += 1
@@ -161,7 +164,7 @@ def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
         if closed_len < CONSECUTIVE_CLOSED or closed_len > 15:
             continue
 
-        # Phase 3: eyes open again
+        # Phase 3: eyes open again.
         if i >= len(recent):
             break
         reopen_start = i
@@ -210,6 +213,7 @@ def _get_pfld_landmarks(frame: np.ndarray, bbox: np.ndarray) -> np.ndarray | Non
     return landmarks
 
 def run_inference(frame: np.ndarray) -> dict:
+    """Run face detection + liveness on a single frame, return JSON payload."""
     global liveness_valid_until, cached_faces, cached_landmarks, cached_status
     global _last_bbox, _stable_frame_count
     global _face_mesh_counter 
@@ -235,7 +239,7 @@ def run_inference(frame: np.ndarray) -> dict:
     bbox = primary.bbox.astype(int)
     bbox_tuple = tuple(primary.bbox.tolist())
 
-    # Check face stability
+    # Face stability check — ignore transient detections.
     face_stable = False
     if _last_bbox is not None:
         jitter = _bbox_jitter(_last_bbox, bbox_tuple)
@@ -282,14 +286,15 @@ def run_inference(frame: np.ndarray) -> dict:
         if not face_stable and not is_live:
             status_extra = f" S:{_stable_frame_count}"
 
-    status_text = "ACCESS GRANTED" if is_live else "LOCKED"
-    color = (0, 255, 0) if is_live else (0, 0, 255)
-
-    if not face_stable and not is_live:
+    if is_live:
+        status_text = "ACCESS GRANTED"
+        color = (0, 255, 0)
+    elif not face_stable:
         status_text = "STABILIZE" + status_extra
         color = (0, 165, 255)
-    elif not is_live:
+    else:
         status_text = "LOCKED" + status_extra
+        color = (0, 0, 255)
 
     embedding = primary.embedding.tolist() if primary.embedding is not None else []
     face_data = [
@@ -312,6 +317,7 @@ def run_inference(frame: np.ndarray) -> dict:
 
 
 def draw_frame(frame: np.ndarray) -> np.ndarray:
+    """Overlay FPS, bounding box, status text, and EAR on a display frame."""
     display = frame.copy()
     h, w, _ = display.shape
 
@@ -340,9 +346,13 @@ def draw_frame(frame: np.ndarray) -> np.ndarray:
         bbox = primary.bbox.astype(int)
         cv2.rectangle(display, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
         cv2.putText(
-            display, status_text,
+            display,
+            status_text,
             (bbox[0], max(bbox[1] - 10, y + 10)),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1,
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            color,
+            1,
         )
         if landmarks is not None:
             ear_left = _calculate_ear(landmarks, LEFT_EYE_IDX)
@@ -362,6 +372,7 @@ def draw_frame(frame: np.ndarray) -> np.ndarray:
 
 
 def capture_thread():
+    """Read frames from the camera and push them to capture + display queues."""
     global _fps_capture
     cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -391,32 +402,22 @@ def capture_thread():
         with _fps_lock:
             _fps_capture = _update_fps(fps_window, now)
 
-        try:
-            capture_queue.put_nowait(frame)
-        except queue.Full:
+        for q in (capture_queue, display_queue):
             try:
-                capture_queue.get_nowait()
-            except queue.Empty:
-                pass
-            try:
-                capture_queue.put_nowait(frame)
+                q.put_nowait(frame)
             except queue.Full:
-                pass
-
-        try:
-            display_queue.put_nowait(frame)
-        except queue.Full:
-            try:
-                display_queue.get_nowait()
-            except queue.Empty:
-                pass
-            try:
-                display_queue.put_nowait(frame)
-            except queue.Full:
-                pass
+                try:
+                    q.get_nowait()
+                except queue.Empty:
+                    pass
+                try:
+                    q.put_nowait(frame)
+                except queue.Full:
+                    pass
 
 
 def inference_thread():
+    """Pull frames from capture_queue, run detection, publish latest_result."""
     global latest_result, _fps_inference
     fps_window: list[float] = []
     no_face_skip = 0
@@ -443,6 +444,7 @@ def inference_thread():
 
 
 def stream_thread():
+    """Pull frames from display_queue, draw overlays, encode JPEG for streaming."""
     global latest_frame, _fps_stream
     fps_window: list[float] = []
 
@@ -462,8 +464,6 @@ def stream_thread():
             with _frame_lock:
                 latest_frame = jpeg
 
-
-# --- FastAPI ---
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -512,4 +512,5 @@ async def ml_stream():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8001)

@@ -1,4 +1,4 @@
-"""Tests for issue #76 — unified user table, CRUD, type switching."""
+"""Tests for FaceDatabase: unified user table, CRUD, type switching."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def _rand_embedding(seed: int) -> np.ndarray:
 
 
 def test_schema_has_unified_users_table(db: FaceDatabase):
-    """Issue #76 — single users table with type column."""
+    """Single users table with type column."""
     with db._lock:
         cols = {row["name"] for row in db._conn.execute("PRAGMA table_info(users)").fetchall()}
     assert "type" in cols
@@ -132,7 +132,7 @@ def test_delete_user(db: FaceDatabase):
 
 
 # ---------------------------------------------------------------------------
-# Type switching — issue #76 core requirement
+# Type switching.
 # ---------------------------------------------------------------------------
 
 
@@ -232,7 +232,7 @@ def test_purge_expired_purges_only_temporary(db: FaceDatabase):
 
 
 # ---------------------------------------------------------------------------
-# Issue #79 — log rotation
+# Log rotation
 # ---------------------------------------------------------------------------
 
 
@@ -274,7 +274,7 @@ def test_purge_old_logs_default_30_days(db: FaceDatabase):
 
 
 # ---------------------------------------------------------------------------
-# Issue #79 — recognize() logs transitions only
+# recognize() logs transitions only
 # ---------------------------------------------------------------------------
 
 

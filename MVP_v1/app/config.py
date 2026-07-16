@@ -53,18 +53,26 @@ class Settings(BaseSettings):
     servo_pin: int = 18
     servo_open_duration_sec: float = Field(default=2.0, ge=0.1, le=30.0)
 
+    # --- Liveness ---
+    liveness_enabled: bool = Field(
+        default=False, description="Require a blink before granting access"
+    )
+    liveness_ear_threshold: float = Field(default=0.20, ge=0.05, le=0.40)
+    liveness_min_blink_duration_ms: int = Field(default=100, ge=50)
+    liveness_timeout_sec: float = Field(default=3.0, ge=1.0, le=10.0)
+
     # --- Server ---
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "INFO"
 
-    # --- Liveness ---
-    liveness_enabled: bool = Field(default=False, description="Need blinking for access")
-    liveness_ear_threshold: float = Field(default=0.20, ge=0.05, le=0.40)
-    liveness_min_blink_duration_ms: int = Field(default=100, ge=50)
-    liveness_timeout_sec: float = Field(default=3.0, ge=1.0, le=10.0)
+    # --- Display timezone ---
+    # Datetimes are stored in UTC. This timezone is used when rendering
+    # datetimes in the admin UI and when parsing naive
+    # <input type="datetime-local"> values submitted by the browser.
+    local_timezone: str = "Europe/Moscow"
 
-    # --- Audit log retention (issue #79) ---
+    # --- Audit log retention ---
     # Auto-delete log entries older than this many days.
     log_retention_days: int = Field(default=30, ge=1)
 

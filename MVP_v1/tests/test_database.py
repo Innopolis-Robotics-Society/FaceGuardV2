@@ -1,4 +1,4 @@
-"""Tests for FaceDatabase (issue #29 — data access layer).
+"""Tests for FaceDatabase (centralized data access layer).
 
 Covers:
 - Schema bootstrap on a fresh DB.

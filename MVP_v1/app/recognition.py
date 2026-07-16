@@ -1,10 +1,21 @@
-"""Background recognition loop — OPTIMIZED with Passive Liveness."""
+"""Background recognition loop.
+
+Polls the ML service at a fixed cadence, runs the face-embedding match
+against the database, and updates the system state with the verdict.
+Access grants trigger the servo (real GPIO on Pi, emulated on x86).
+
+Liveness detection is delegated to the ML service: each frame's face
+entry carries an ``liveness_passed`` flag set by the ML side (passive
+blink detection). The backend only enforces that the flag is true
+before granting access (when ``liveness_enabled`` is set in config).
+"""
 
 from __future__ import annotations
 
 import asyncio
 import logging
 import time
+from datetime import UTC, datetime
 
 import numpy as np
 
@@ -83,6 +94,7 @@ class RecognitionLoop:
     async def _tick(self) -> None:
         now = time.time()
 
+        # Periodic ML health probe.
         if now - self._last_health_check > 30.0:
             healthy = await self._ml.health()
             self._state.set_ml_health(healthy)
@@ -92,6 +104,7 @@ class RecognitionLoop:
                 self._state.update(CurrentVerdict(verdict="error", name="ML service unreachable"))
                 return
 
+        # Daily log rotation.
         if now - self._last_log_purge > 86400.0:
             try:
                 n = await asyncio.to_thread(self._db.purge_old_logs, self._log_retention_days)
@@ -112,6 +125,8 @@ class RecognitionLoop:
             self._state.update(CurrentVerdict(verdict="idle"))
             return
 
+        # Prefer the face flagged as primary by the ML service; fall back
+        # to the largest bounding box if no primary is set.
         primary = next((f for f in latest.faces if f.is_primary), None)
         if primary is None:
             primary = max(
@@ -142,7 +157,7 @@ class RecognitionLoop:
             )
             return
 
-        # --- PASSIVE LIVENESS CHECK ---
+        # Liveness gate. When disabled, grant immediately.
         if not self._settings.liveness_enabled:
             await self._grant_access(result, primary, liveness_passed=None)
             return
@@ -150,7 +165,8 @@ class RecognitionLoop:
         if primary.liveness_passed:
             await self._grant_access(result, primary, liveness_passed=True)
         else:
-            # Wait for natural blink — no timers
+            # Hold in the liveness_check state until the ML side reports
+            # a successful blink.
             self._state.update(
                 CurrentVerdict(
                     verdict="liveness_check",
@@ -199,6 +215,7 @@ class RecognitionLoop:
         )
 
     def _log_verdict_change(self, verdict: str, detail: str) -> None:
+        """Emit a Python log line only when the verdict changes."""
         if self._last_logged_verdict == verdict:
             return
         self._last_logged_verdict = verdict
@@ -211,7 +228,7 @@ class RecognitionLoop:
         elif verdict == "idle":
             log.debug("Idle: %s", detail)
         elif verdict == "liveness_check":
-            log.debug("Liveness Check: %s", detail)
+            log.debug("Liveness check: %s", detail)
 
 
 def register_one(
@@ -220,10 +237,21 @@ def register_one(
     *,
     name: str,
     is_guest: bool,
-    guest_days: int | None = None,
+    expires_at: datetime | None = None,
     frame_count: int = 5,
     frame_interval_ms: int = 400,
 ) -> tuple[str, list[float]]:
+    """Capture N frames from the ML service, average their embeddings,
+    and persist the result.
+
+    For ``is_guest=True`` the caller must provide ``expires_at`` (a
+    UTC-aware datetime). Returns ``(status_message, embedding_preview)``
+    where the preview is the first 8 components of the averaged
+    embedding — useful for confirming in the UI that capture worked.
+
+    Blocks for ``frame_count * frame_interval_ms``. The caller should
+    run it inside ``asyncio.to_thread(...)`` from an async context.
+    """
     embeddings: list[np.ndarray] = []
     interval = frame_interval_ms / 1000.0
 
@@ -256,10 +284,13 @@ def register_one(
         avg = avg / norm
 
     if is_guest:
-        if not guest_days or guest_days <= 0:
-            raise ValueError("guest_days must be a positive integer")
-        db.register_guest_for_days(name, avg, guest_days)
-        msg = f"Guest '{name}' registered — expires in {guest_days} day(s)."
+        if expires_at is None:
+            raise ValueError("temporary registration requires expires_at")
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        db.register_user(name, avg, type="temporary", expires_at=expires_at)
+        local_str = expires_at.astimezone(UTC).isoformat()
+        msg = f"Guest '{name}' registered — valid until {local_str}."
     else:
         db.register_user(name, avg)
         msg = f"User '{name}' registered."
