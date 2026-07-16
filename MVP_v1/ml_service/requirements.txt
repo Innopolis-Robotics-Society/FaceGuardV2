@@ -3,4 +3,4 @@ uvicorn
 opencv-python-headless
 insightface
 numpy
-mediapipe==0.10.9
+onnxruntime>=1.15.0
