@@ -17,12 +17,14 @@ The dashboard is the main screen, showing:
   | State | Overlay | Meaning |
   |---|---|---|
   | Idle | Grey — `Waiting for face...` | No face currently detected. Door locked. |
-  | Scanning | Yellow — `Scanning...` | A face was detected and is being compared; lasts one recognition tick. |
+  | Liveness check | Yellow — `Liveness check: please blink` | A match was found; waiting for a blink before granting access (only when liveness is enabled). |
   | Granted | Green — `Access granted: <Name>` | Match found above threshold (and liveness passed, if enabled). Door unlocks. |
-  | Denied | Red — `Access denied: Unknown` | Face detected but no match above threshold. Door stays locked. |
+  | Denied | Red — `Access denied` | Face detected but no match above threshold. Door stays locked. |
   | Error | Dark red — `System error` | ML service unreachable or the recognition loop crashed. Check the status panel. |
 
-- **Status panel**, showing: ML service health (online/offline), door state (locked/open), last recognized user and score, counts of permanent users/active guests/log entries, and current servo state.
+- **Status panel**, showing: ML service health (online/offline), door state, last recognized user and score, counts of permanent users/active guests/log entries, and current servo state.
+
+  The "Door" and "Servo" fields both react to the same verdict but show different things: "Door" reflects the access decision (`Locked` in grey/yellow/red depending on why, or `Opened` in green), while "Servo" only reflects the physical actuator (`Idle` or `Triggered`) and is not colour-coded — see [interface.md, §1](interface.md#1-live-display-web) for the full state-by-state breakdown across the camera overlay, door status, and servo status.
 
 Updates arrive live over Server-Sent Events — the page does not need to be refreshed.
 

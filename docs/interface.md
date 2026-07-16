@@ -27,83 +27,85 @@ so the admin can see what the camera sees from their laptop.
 
 ### States
 
-The verdict overlay reflects the current state of the recognition loop.
+A single recognition **verdict** (`idle` / `liveness_check` / `granted` /
+`denied` / `error`) drives three separate visual indicators on the
+dashboard at once: the camera overlay text, the "Door" status field, and
+the "Servo" status field. They read the same event but don't carry the
+same level of detail — the tables below give the exact text/colour for
+each, side by side, since that's easy to lose track of when reading the
+three UI elements separately.
 
-#### 1.1 Idle (no face detected)
+> Note: a `scanning` CSS class and colour also exist in the stylesheet
+> from an earlier design, but the recognition loop never actually emits
+> a `scanning` verdict — the transition state users actually see is
+> `liveness_check`. Treat `scanning` as dead styling, not a real state.
 
-- **Overlay colour:** grey
-- **Text:** `Waiting for face...`
-- Door stays locked, servo idle.
+#### 1.1 Camera overlay (text shown on the video feed)
+
+| Verdict | Overlay text | Meta line | Colour |
+|---|---|---|---|
+| `idle` | `Waiting for face...` | — | Grey |
+| `liveness_check` | `Liveness check: please blink` | `{name} · score {score:.3f}` | Yellow |
+| `granted` | `Access granted: {Name}` | `{access_type} · score {score:.3f}` | Green |
+| `denied` | `Access denied` | `score {score:.3f}` | Red |
+| `error` | `System error` | short diagnostic (e.g. `ML service unreachable`) | Dark red |
+
+#### 1.2 Door status (dashboard status panel, "Door" row)
+
+| Verdict | Text | Colour |
+|---|---|---|
+| `idle` | `Locked` | Grey |
+| `liveness_check` | `Locked` | Yellow |
+| `denied` | `Locked` | Red |
+| `granted` | `Opened` | Green |
+| `error` | `—` | *(known issue: colour is not reset from whatever the previous verdict left it at — see below)* |
+
+#### 1.3 Servo status (dashboard status panel, "Servo" row)
+
+| Verdict | Text | Colour |
+|---|---|---|
+| `idle`, `denied`, `liveness_check` | `Idle` | Grey |
+| `granted` | `Triggered` | Grey — **unchanged from `Idle`; the servo field carries no colour coding at all today**, unlike the door status and camera overlay above. |
+| `error` | `—` | Grey |
+
+The servo field only ever reports the mechanical actuator's own state
+(idle vs. actuated) rather than the semantic access decision, which is
+why it doesn't need the same 4/5-way colour split as the door status and
+camera overlay — those two describe *why* the door is locked or open,
+while the servo field describes *what the motor is physically doing*.
+
+#### Known issue: stale door-status colour on error
+
+When an `error` verdict follows a `granted` or `denied` verdict, the door
+status text resets to `—` but its colour is not reset in
+[`dashboard.js`](../MVP_v1/app/static/dashboard.js) — so it can stay
+green or red instead of reverting to a neutral colour. Worth fixing
+alongside any other UI work that touches this area.
+
+### Mockups
 
 ```
-┌─────────────────────┐
-│  [Camera feed]      │
-│                     │
-│                     │
-└─────────────────────┘
-   Waiting for face...
-        (grey)
+┌─────────────────────┐        ┌─────────────────────┐
+│  [Camera feed]      │        │  [Camera feed]      │
+│                     │        │   ┌─────────┐       │
+│                     │        │   │  face   │       │
+└─────────────────────┘        │   └─────────┘       │
+   Waiting for face...         │  Access granted:    │
+        (grey)                 │  Ivanov Petr        │
+                                │  user · 0.821       │
+                                └─────────────────────┘
+                                        (green)
+
+┌─────────────────────┐        ┌─────────────────────┐
+│  [Camera feed]      │        │  [Camera feed]      │
+│   ┌─────────┐       │        │   ┌─────────┐       │
+│   │  face   │       │        │   │  face   │       │
+│   └─────────┘       │        │   └─────────┘       │
+│  Liveness check:    │        │  Access denied      │
+│  please blink       │        │  score 0.312        │
+└─────────────────────┘        └─────────────────────┘
+        (yellow)                       (red)
 ```
-
-#### 1.2 Scanning (face detected, comparison in flight)
-
-- **Overlay colour:** yellow
-- **Text:** `Scanning...`
-- Brief — lasts one recognition tick (≤ `RECOGNITION_INTERVAL_MS`).
-
-#### 1.3 Granted (known user / guest)
-
-- **Overlay colour:** green
-- **Text:** `Access granted: {Name}`
-- **Meta:** `{access_type} · score {score:.3f}`
-- Door status flips to "Open".
-- Servo rotates to the open position for `SERVO_OPEN_DURATION_SEC`, then
-  returns. On x86 (no GPIO), the servo state is reflected in the status
-  panel as "Triggered (open)".
-- If liveness detection is enabled (`LIVENESS_ENABLED=true`), a passed blink
-  check within the validity window is also required before granting access —
-  see [user-guide.md](user-guide.md#liveness-detection) and
-  [configuration.md](configuration.md#liveness-detection).
-
-```
-┌─────────────────────┐
-│  [Camera feed]      │
-│   ┌─────────┐       │
-│   │  face   │       │
-│   └─────────┘       │
-│  Access granted:    │
-│  Ivanov Petr        │
-│  user · 0.821       │
-└─────────────────────┘
-        (green)
-```
-
-#### 1.4 Denied (face seen but no match above threshold)
-
-- **Overlay colour:** red
-- **Text:** `Access denied: Unknown`
-- **Meta:** `score {best:.3f}`
-- Door stays locked. Audit log entry written (`success=false`).
-
-```
-┌─────────────────────┐
-│  [Camera feed]      │
-│   ┌─────────┐       │
-│   │  face   │       │
-│   └─────────┘       │
-│  Access denied:     │
-│  Unknown            │
-│  score 0.312        │
-└─────────────────────┘
-        (red)
-```
-
-#### 1.5 Error (ML service unreachable / loop crashed)
-
-- **Overlay colour:** dark red
-- **Text:** `System error`
-- **Meta:** short diagnostic (e.g. `ML service unreachable`)
-- Status panel shows `ML service: Offline`.
 
 ---
 
@@ -237,10 +239,12 @@ equivalents in MVP v1:
 
 ### LED indicators (planned for v2)
 
-Customer-requested LED feedback (green=granted, red=denied, yellow=scanning)
-is documented but not yet wired in MVP v1. The verdict overlay colour
-scheme mirrors the planned LED colours so the visual feedback contract is
-already stable.
+Customer-requested LED feedback (green=granted, red=denied,
+yellow=liveness check) is documented but not yet wired in MVP v1. The
+verdict overlay colour scheme in [§1](#1-live-display-web) mirrors the
+planned LED colours so the visual feedback contract is already stable —
+implementing the LEDs should be a matter of driving them from the same
+verdict value already used for the door status and camera overlay.
 
 ---
 
