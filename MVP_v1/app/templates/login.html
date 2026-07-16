@@ -3,7 +3,7 @@
 
 {% block content %}
 <article class="login-card">
-  <h2>FaceGuard Admin</h2>
+  <h2 style="margin-bottom:20px;">FaceGuard Admin</h2>
   {% if error %}
     <small class="error">{{ error }}</small>
   {% endif %}
@@ -16,7 +16,7 @@
       Password
       <input type="password" name="password" required>
     </label>
-    <button type="submit">Sign in</button>
+    <button type="submit" class="primary" style="width:100%; margin-top:6px;">Sign in</button>
   </form>
 </article>
 {% endblock %}

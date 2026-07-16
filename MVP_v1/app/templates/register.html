@@ -2,63 +2,51 @@
 {% block title %}Register — FaceGuard{% endblock %}
 
 {% block content %}
-<header>
-  <h2>Register a new person</h2>
-  <p class="muted">
-    The camera will capture {{ frame_count }} frames in real time and
-    average their embeddings before saving. Make sure the person is
-    facing the camera before submitting.
-  </p>
-</header>
-
-<div class="grid">
-  <section>
-    <h3>Live preview</h3>
+<div class="grid grid-2-1">
+  <section style="min-height:0; overflow:hidden;">
     <div class="video-wrap">
       <img id="camera-feed" src="/stream" alt="Live camera stream">
     </div>
-    <p class="muted small">Preview only — actual frames are captured server-side.</p>
   </section>
 
-  <aside>
-    <h3>Registration form</h3>
-    <form id="register-form"
-          hx-post="/register"
-          hx-target="#register-result"
-          hx-swap="innerHTML"
-          hx-disabled-elt="#submit-btn">
-      <label>
-        Full name (Surname Firstname)
-        <input type="text" name="name" required
-               placeholder="e.g. Ivanov Petr">
-      </label>
-
-      <fieldset>
-        <legend>Access type</legend>
+  <aside class="page-fill">
+    <h3>New person</h3>
+    <div class="card">
+      <form id="register-form"
+            hx-post="/register"
+            hx-target="#register-result"
+            hx-swap="innerHTML"
+            hx-disabled-elt="#submit-btn">
         <label>
-          <input type="radio" name="access_type" value="permanent" checked
-                 hx-get="/register/options/permanent" hx-target="#guest-options"
-                 hx-swap="innerHTML">
-          Permanent
+          Full name
+          <input type="text" name="name" required
+                 placeholder="Surname Firstname">
         </label>
-        <label>
-          <input type="radio" name="access_type" value="temporary"
-                 hx-get="/register/options/temporary" hx-target="#guest-options"
-                 hx-swap="innerHTML">
-          Temporary
-        </label>
-      </fieldset>
 
-      <div id="guest-options"></div>
+        <fieldset>
+          <legend>Access type</legend>
+          <label>
+            <input type="radio" name="access_type" value="permanent" checked
+                   hx-get="/register/options/permanent" hx-target="#guest-options"
+                   hx-swap="innerHTML">
+            <span>Permanent</span>
+          </label>
+          <label>
+            <input type="radio" name="access_type" value="temporary"
+                   hx-get="/register/options/temporary" hx-target="#guest-options"
+                   hx-swap="innerHTML">
+            <span>Temporary</span>
+          </label>
+        </fieldset>
 
-      <button id="submit-btn" type="submit">Capture &amp; register</button>
-      <small class="muted">
-        Captures {{ frame_count }} frames at ~0.4s intervals. The form will
-        be disabled for ~2 seconds.
-      </small>
-    </form>
+        <div id="guest-options"></div>
 
-    <div id="register-result"></div>
+        <button id="submit-btn" type="submit" class="primary">Capture &amp; register</button>
+        <small class="muted">{{ frame_count }} frames at ~0.4s intervals.</small>
+      </form>
+
+      <div id="register-result"></div>
+    </div>
   </aside>
 </div>
 {% endblock %}

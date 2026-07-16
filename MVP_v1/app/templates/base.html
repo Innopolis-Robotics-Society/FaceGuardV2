@@ -1,26 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}FaceGuard{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <link rel="stylesheet" href="/static/custom.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 <body>
-  <nav class="container-fluid topnav">
+  <nav class="topnav">
+    <strong>FaceGuard</strong>
     <ul>
-      <li><strong>FaceGuard</strong></li>
+      <li><a href="/" {% if request.url.path == '/' %}aria-current="page"{% endif %}>Dashboard</a></li>
+      <li><a href="/users" {% if request.url.path == '/users' %}aria-current="page"{% endif %}>Users</a></li>
+      <li><a href="/register" {% if request.url.path == '/register' %}aria-current="page"{% endif %}>Register</a></li>
+      <li><a href="/logs" {% if request.url.path == '/logs' %}aria-current="page"{% endif %}>Logs</a></li>
     </ul>
-    <ul>
-      <li><a href="/">Dashboard</a></li>
-      <li><a href="/users">Users</a></li>
-      <li><a href="/register">Register</a></li>
-      <li><a href="/logs">Logs</a></li>
+    <ul style="margin-left:auto">
       <li>
         <form method="post" action="/logout" style="margin:0">
-          <button class="outline secondary" type="submit">Logout</button>
+          <button class="logout-btn" type="submit">Logout</button>
         </form>
       </li>
     </ul>

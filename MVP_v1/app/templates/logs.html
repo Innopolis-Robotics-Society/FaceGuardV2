@@ -2,59 +2,60 @@
 {% block title %}Logs — FaceGuard{% endblock %}
 
 {% block content %}
-<header>
-  <h2>Access log</h2>
-  <form method="get" action="/logs" class="grid">
-    <label>
-      Filter by name
-      <input type="text" name="q" value="{{ query }}" placeholder="substring match">
-    </label>
-    <label>
-      <input type="checkbox" name="today" {% if today_filter %}checked{% endif %}>
-      Today only
-    </label>
-    <div>
-      <button type="submit" class="outline">Apply</button>
-      <a href="/logs" class="button secondary outline">Reset</a>
-    </div>
-  </form>
-</header>
+<div class="page-fill">
+  {# ---------- Filter card ---------- #}
+  <div class="card" style="flex-shrink:0;">
+    <form method="get" action="/logs" id="logs-filter-form">
+      <div class="search-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" name="q" value="{{ query }}"
+               placeholder="Search by name / user..."
+               autocomplete="off">
+      </div>
 
-<section>
-  {% if entries %}
-  <table>
-    <thead>
-      <tr>
-        <th>Time</th>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Score</th>
-        <th>Liveness</th>
-        <th>Result</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for e in entries %}
-      <tr class="log-row {% if e.success %}log-ok{% else %}log-denied{% endif %}">
-        <td>{{ e.timestamp|localdt('%Y-%m-%d %H:%M:%S') }}</td>
-        <td>{{ e.name }}</td>
-        <td>{{ e.access_type }}</td>
-        <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
-        <td>
-          {% if e.liveness_passed is none %}—
-          {% elif e.liveness_passed %}✓ passed
-          {% else %}✗ failed
-          {% endif %}
-        </td>
-        <td>
-          {% if e.success %}✓ granted{% else %}✗ denied{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">No log entries match the filter.</p>
-  {% endif %}
-</section>
+      <div class="filter-bar" style="margin-top:12px;">
+        <button type="button" class="filter-pill {% if range == 'today' %}active{% endif %}"
+                data-range="today">Today</button>
+        <button type="button" class="filter-pill {% if range == 'week' %}active{% endif %}"
+                data-range="week">This Week</button>
+        <button type="button" class="filter-pill {% if range == 'all' %}active{% endif %}"
+                data-range="all">All time</button>
+        <input type="hidden" name="range" id="range-input" value="{{ range }}">
+        <div class="spacer"></div>
+        <div class="actions">
+          <a href="/logs" class="button outline">Reset</a>
+          <button type="submit" class="button primary">Apply</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {# ---------- Logs table (auto-refreshes every 2s via HTMX) ---------- #}
+  <div class="table-wrap"
+       id="logs-table-wrap"
+       hx-get="/logs/table"
+       hx-trigger="every 2s"
+       hx-vals='{"range": "{{ range }}", "q": "{{ query }}"}'
+       hx-swap="innerHTML">
+    {% include "partials/logs_table.html" %}
+  </div>
+</div>
+
+<script>
+  // Quick-filter pills update the hidden range input and auto-submit.
+  document.querySelectorAll('.filter-pill').forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      document.querySelectorAll('.filter-pill').forEach(function (p) {
+        p.classList.remove('active');
+      });
+      pill.classList.add('active');
+      document.getElementById('range-input').value = pill.dataset.range;
+      document.getElementById('logs-filter-form').submit();
+    });
+  });
+</script>
 {% endblock %}

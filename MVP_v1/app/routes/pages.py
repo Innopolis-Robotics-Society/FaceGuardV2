@@ -94,17 +94,60 @@ async def logs_page(
     request: Request,
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
-    today: bool = Query(False),
+    range: str = Query("all"),
     q: str | None = Query(None),
+    today: bool = Query(False),  # legacy, kept for old bookmarks
 ):
-    entries = db.list_logs(limit=300, today_only=today, user_filter=q)
+    """Render the access-log page.
+
+    ``range`` accepts 'today', 'week', or 'all'. The legacy ``today``
+    boolean is still respected for backwards compatibility.
+    """
+    today_only = today or range == "today"
+    week_only = range == "week"
+    entries = db.list_logs(
+        limit=300,
+        today_only=today_only,
+        week_only=week_only,
+        user_filter=q,
+    )
     return templates.TemplateResponse(
         request,
         "logs.html",
         {
             "entries": entries,
-            "today_filter": today,
+            "range": range if range in ("today", "week", "all") else "all",
             "query": q or "",
+        },
+    )
+
+
+@router.get("/logs/table")
+async def logs_table_partial(
+    request: Request,
+    _admin=Depends(require_admin),
+    db: FaceDatabase = Depends(),
+    range: str = Query("all"),
+    q: str | None = Query(None),
+):
+    """HTMX partial — returns just the table HTML for live refresh.
+
+    The logs page polls this endpoint every 2 seconds and swaps the
+    table container without reloading the filters.
+    """
+    today_only = range == "today"
+    week_only = range == "week"
+    entries = db.list_logs(
+        limit=300,
+        today_only=today_only,
+        week_only=week_only,
+        user_filter=q,
+    )
+    return templates.TemplateResponse(
+        request,
+        "partials/logs_table.html",
+        {
+            "entries": entries,
         },
     )
 
