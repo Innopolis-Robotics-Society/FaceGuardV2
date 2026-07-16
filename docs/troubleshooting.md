@@ -47,9 +47,9 @@ Common problems when running or deploying FaceGuardV2, and what to check first.
 
 ## Liveness / blink check seems to block valid users
 
-- Confirm you're actually blinking naturally while looking at the camera — the check requires a detected blink within `LIVENESS_TIMEOUT_SEC`.
-- If it's consistently too strict, review `LIVENESS_EAR_THRESHOLD` in [configuration.md](configuration.md) — lowering it makes blink detection more permissive, but a value that's too low increases the risk of false-positive "blinks."
-- To rule it out while debugging something else, temporarily set `LIVENESS_ENABLED=false`, restart, and re-test.
+- Confirm you're actually blinking naturally while looking at the camera — the check requires a detected blink within a few seconds.
+- `LIVENESS_EAR_THRESHOLD`, `LIVENESS_MIN_BLINK_DURATION_MS`, and `LIVENESS_TIMEOUT_SEC` in `.env` currently have **no effect** — blink sensitivity is hardcoded in `MVP_v1/ml_service/main.py` (`EAR_THRESHOLD`, `REQUIRED_BLINKS`, `LIVENESS_TTL_SECONDS`). If it's consistently too strict or too loose, that file needs to be edited and the `ml` image rebuilt — see [configuration.md, "Liveness detection"](configuration.md#liveness-detection).
+- To rule it out while debugging something else, temporarily set `LIVENESS_ENABLED=false`, restart, and re-test — this one *does* work via `.env`.
 
 ## Logs grow too large / old entries aren't cleaned up
 
@@ -58,7 +58,8 @@ Common problems when running or deploying FaceGuardV2, and what to check first.
 ## Docker build fails
 
 - Rebuild with a clean cache: `docker compose build --no-cache`.
-- Check available disk space and memory — the `ml` image bakes in an InsightFace model at build time, which is memory/CPU-intensive on a Raspberry Pi's first build.
+- Check available disk space and memory — the `ml` image bakes in an InsightFace model and a PFLD liveness-landmark model at build time, which is memory/CPU-intensive on a Raspberry Pi's first build.
+- Make sure the build machine has network access — the `ml` image downloads the PFLD model from GitHub during the build. If that download fails, the build currently succeeds anyway with just a warning, and the failure only surfaces later as a crash when the `ml` container starts (`FileNotFoundError: pfld.onnx`) — see [deployment-raspberry-pi.md](deployment-raspberry-pi.md#6-start-the-stack).
 - Check `docker compose logs` for the specific dependency or platform error, and compare against the CI build (`.github/workflows/ci.yml`) which builds the same `backend` image on `amd64` — note CI does **not** build or test the `ml` image or an `arm64` target, so an ARM-specific build failure will not show up there.
 
 ## Database / data loss concerns

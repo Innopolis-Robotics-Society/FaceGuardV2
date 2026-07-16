@@ -49,7 +49,7 @@
 
 **US-009 (Should Have)**
 * **Statement:** As a security manager, I want the system to perform a liveness detection check during the recognition process, so that unauthorized individuals cannot spoof the system using printed photos or digital screens.
-* **Status note:** Previously scoped out of the MVP as out-of-scope (see removal note below); re-implemented and shipped in v2.1.0 using MediaPipe Face Mesh blink (EAR) detection, configurable via `LIVENESS_ENABLED`, `LIVENESS_EAR_THRESHOLD`, and `LIVENESS_TIMEOUT_SEC`.
+* **Status note:** Previously scoped out of the MVP as out-of-scope (see removal note below); re-implemented and shipped in v2.1.0 using blink (EAR) detection, gated by `LIVENESS_ENABLED`. Initially built on MediaPipe Face Mesh, later replaced with an ONNX Runtime PFLD landmark model for Raspberry Pi performance (see [CHANGELOG.md](../CHANGELOG.md)).
 
 **US-010 (Should Have)**
 * **Statement:** As a security manager, I want the system to log access attempts — including confidence scores and specific failure categories like poor lighting, masks, or glasses — so that we can audit entry events and explicitly document where the technical boundaries of the system fail.
@@ -79,4 +79,4 @@
 * **US-009: Liveness detection check (originally removed, later reinstated)**
   * *Statement:* As a security manager, I want the system to perform a liveness detection check during the recognition process, so that unauthorized individuals cannot spoof the system using printed photos or digital screens.
   * *Original reason for removal:* Deemed out of scope for the core MVP delivery milestones due to processing overhead limitations on the target edge architecture. Suspended pending hardware acceleration optimization.
-  * *Reinstated:* MediaPipe Face Mesh EAR-based blink detection turned out to be cheap enough to run on Raspberry Pi 4 alongside the `buffalo_sc` recognition model. Liveness was implemented and shipped in v2.0.0/v2.1.0 (see [CHANGELOG.md](../CHANGELOG.md)) and is tracked as an active story above rather than a removed one.
+  * *Reinstated:* EAR-based blink detection turned out to be cheap enough to run on Raspberry Pi 4 alongside the `buffalo_sc` recognition model — first on MediaPipe Face Mesh, later swapped for a lighter ONNX Runtime PFLD landmark model for better Pi performance. Liveness was implemented and shipped in v2.0.0/v2.1.0 (see [CHANGELOG.md](../CHANGELOG.md)) and is tracked as an active story above rather than a removed one.

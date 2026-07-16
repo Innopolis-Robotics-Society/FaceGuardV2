@@ -25,7 +25,7 @@ FaceGuardV2 is a face-recognition access-control system for a single door. It is
 | Camera capture | ML service | Opens `/dev/video0`, reads frames. |
 | Face detection | ML service | InsightFace (`buffalo_sc` model). |
 | Embedding extraction | ML service | 512-dimensional, L2-normalized face vectors. |
-| Liveness / blink check | ML service | MediaPipe Face Mesh eye-aspect-ratio (EAR) blink detection, to resist photo/screen spoofing. |
+| Liveness / blink check | ML service | ONNX Runtime PFLD facial-landmark model, eye-aspect-ratio (EAR) blink detection, to resist photo/screen spoofing. |
 | Embedding storage | Backend | SQLite, via a single data-access module. |
 | Comparison / decision logic | Backend | Cosine similarity against stored embeddings, threshold check, expiry check for temporary access. |
 | Access audit logging | Backend | Every recognition attempt (granted/denied/unknown) recorded. |

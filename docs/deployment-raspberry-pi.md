@@ -93,7 +93,9 @@ This builds and starts two containers:
 - `backend` — the web admin UI and recognition/decision logic, on port `8000`.
 - `ml` — the camera-owning face-detection/embedding service, on port `8001` (internal, not meant to be opened directly). It runs with `privileged: true` and `/dev/video0` passed through so it can access the camera.
 
-The first build downloads and bakes the InsightFace face-recognition model into the `ml` image, so the first `docker compose up --build` takes noticeably longer than later runs.
+The first build downloads and bakes two models into the `ml` image: the InsightFace face-recognition model, and a PFLD facial-landmark model (used for liveness/blink detection), so the first `docker compose up --build` takes noticeably longer than later runs and **requires network access on the build machine**.
+
+If the PFLD model download fails during the build (no network, or the source URL is unreachable), the build currently continues anyway with just a warning printed — it does not fail. In that case the `ml` container will build successfully but crash on startup with a `FileNotFoundError` for `pfld.onnx`. If the `ml` service won't start after a fresh build, check `docker compose logs ml` for this before assuming it's a camera or GPIO problem.
 
 ## 7. Open the admin UI
 

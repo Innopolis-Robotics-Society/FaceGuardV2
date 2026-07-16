@@ -58,10 +58,17 @@ This page is the authoritative list, kept in sync with `config.py`. `.env.exampl
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `LIVENESS_ENABLED` | `false` (`.env.example` ships it set to `true`) | Require a detected blink before granting access, to resist spoofing with a printed photo or a phone/tablet screen. Implemented via MediaPipe Face Mesh eye-aspect-ratio (EAR) blink detection in the ML service. |
-| `LIVENESS_EAR_THRESHOLD` | `0.20` | Eye-aspect-ratio threshold below which an eye is considered closed. Range `0.05`–`0.40`. Lower makes blink detection stricter. |
-| `LIVENESS_MIN_BLINK_DURATION_MS` | `100` | Minimum duration a detected blink must last to count as a genuine blink rather than noise. Not currently listed in `.env.example` — add it explicitly if you need to tune it. |
-| `LIVENESS_TIMEOUT_SEC` | `3.0` | How long a passed liveness check remains valid before it must be re-verified. Range `1.0`–`10.0`. |
+| `LIVENESS_ENABLED` | `false` (`.env.example` ships it set to `true`) | Require a detected blink before granting access, to resist spoofing with a printed photo or a phone/tablet screen. This is the only liveness variable the backend actually acts on — see the note below. |
+| `LIVENESS_EAR_THRESHOLD` | `0.20` | Eye-aspect-ratio threshold below which an eye is considered closed. Range `0.05`–`0.40`. **Not currently wired to the ML service** — see note below. |
+| `LIVENESS_MIN_BLINK_DURATION_MS` | `100` | Minimum duration a detected blink must last to count as a genuine blink rather than noise. Not currently listed in `.env.example`. **Not currently wired to the ML service** — see note below. |
+| `LIVENESS_TIMEOUT_SEC` | `3.0` | How long a passed liveness check remains valid before it must be re-verified. Range `1.0`–`10.0`. **Not currently wired to the ML service** — see note below. |
+
+Liveness (blink) detection is implemented entirely in the ML service (`MVP_v1/ml_service/main.py`) using an ONNX Runtime PFLD facial-landmark model to compute eye-aspect-ratio, having replaced an earlier MediaPipe Face Mesh implementation. The ML service does not read any environment variables — its blink-sensitivity constants (EAR threshold, required blink count, liveness validity window, etc.) are hardcoded in that file. In practice this means:
+
+- `LIVENESS_ENABLED` works as documented — it's read by the backend (`app/config.py`) and gates whether a passed blink check is required before granting access.
+- `LIVENESS_EAR_THRESHOLD`, `LIVENESS_MIN_BLINK_DURATION_MS`, and `LIVENESS_TIMEOUT_SEC` are defined in `app/config.py` but currently have no effect on the actual blink-detection behavior — tuning liveness sensitivity today requires editing the constants at the top of `ml_service/main.py` (e.g. `EAR_THRESHOLD`, `REQUIRED_BLINKS`, `LIVENESS_TTL_SECONDS`) and rebuilding the `ml` image, not editing `.env`.
+
+If you need this wired through properly, that's a real gap worth raising as a follow-up rather than something to work around via `.env`.
 
 ## Server
 

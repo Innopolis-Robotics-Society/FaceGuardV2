@@ -48,7 +48,7 @@ MVP_v1/
 │   ├── templates/             # Jinja2 templates + partials/
 │   └── static/                 # custom.css, dashboard.js
 ├── ml_service/
-│   ├── main.py                # camera, InsightFace, MediaPipe liveness
+│   ├── main.py                # camera, InsightFace, ONNX PFLD liveness
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── tests/                     # pytest suite (unit, integration, qrt markers)
