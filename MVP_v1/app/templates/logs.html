@@ -34,11 +34,11 @@
     </form>
   </div>
 
-  {# ---------- Logs table (auto-refreshes every 5s via HTMX) ---------- #}
+  {# ---------- Logs table (auto-refreshes every 2s via HTMX) ---------- #}
   <div class="table-wrap"
        id="logs-table-wrap"
        hx-get="/logs/table"
-       hx-trigger="every 5s"
+       hx-trigger="every 2s"
        hx-vals='{"range": "{{ range }}", "q": "{{ query }}"}'
        hx-swap="innerHTML">
     {% include "partials/logs_table.html" %}

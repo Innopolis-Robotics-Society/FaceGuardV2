@@ -147,11 +147,13 @@ body {
 /* ---- Main content area ---- */
 
 main.container {
-  flex: 1;
-  overflow: hidden;
+  flex: 1 1 auto;
   min-height: 0;
   padding: var(--page-pad);
   max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* ---- Layout primitives ---- */

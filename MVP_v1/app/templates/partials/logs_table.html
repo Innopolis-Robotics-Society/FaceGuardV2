@@ -1,5 +1,5 @@
 {# HTMX partial — table only, no filters.
-   Polled every 5 seconds from logs.html via hx-get="/logs/table".
+   Polled every 2 seconds from logs.html via hx-get="/logs/table".
    Current filters (range, q) are forwarded by the hx-vals attribute on
    the parent container. #}
 {% if entries %}
@@ -19,7 +19,11 @@
     <tr class="log-row">
       <td class="mono">{{ e.timestamp|localdt('%m-%d %H:%M:%S') }}</td>
       <td>
-        <a href="/logs?q={{ e.name }}">{{ e.name }}</a>
+        {% if e.access_type == "unknown" %}
+          <span class="muted">{{ e.name }}</span>
+        {% else %}
+          <a href="/logs?q={{ e.name }}">{{ e.name }}</a>
+        {% endif %}
       </td>
       <td class="col-center">
         <span class="badge {{ e.access_type }}">{{ e.access_type }}</span>

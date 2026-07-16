@@ -132,7 +132,7 @@ async def logs_table_partial(
 ):
     """HTMX partial — returns just the table HTML for live refresh.
 
-    The logs page polls this endpoint every 5 seconds and swaps the
+    The logs page polls this endpoint every 2 seconds and swaps the
     table container without reloading the filters.
     """
     today_only = range == "today"
