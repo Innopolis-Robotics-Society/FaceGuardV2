@@ -60,6 +60,10 @@ The verdict overlay reflects the current state of the recognition loop.
 - Servo rotates to the open position for `SERVO_OPEN_DURATION_SEC`, then
   returns. On x86 (no GPIO), the servo state is reflected in the status
   panel as "Triggered (open)".
+- If liveness detection is enabled (`LIVENESS_ENABLED=true`), a passed blink
+  check within the validity window is also required before granting access —
+  see [user-guide.md](user-guide.md#liveness-detection) and
+  [configuration.md](configuration.md#liveness-detection).
 
 ```
 ┌─────────────────────┐
@@ -242,5 +246,32 @@ already stable.
 
 ## 6. API summary
 
-All admin endpoints require a valid session cookie. See `README.md` for
-the full HTTP method / path table.
+All admin endpoints require a valid session cookie (except `/login` and `/healthz`).
+
+| Method | Path                         | Auth | Purpose                          |
+|--------|------------------------------|------|-----------------------------------|
+| GET    | `/login`                     | —    | Login form                       |
+| POST   | `/login`                     | —    | Submit credentials               |
+| POST   | `/logout`                    | ✓    | End session                      |
+| GET    | `/`                          | ✓    | Live dashboard                   |
+| GET    | `/users`                     | ✓    | Users + guests list              |
+| GET    | `/users/{id}`                | ✓    | User detail + edit page          |
+| POST   | `/users/{id}/update`         | ✓    | Update user from detail page     |
+| POST   | `/users/{id}/delete`         | ✓    | Delete permanent user            |
+| POST   | `/guests/{id}/delete`        | ✓    | Revoke guest                     |
+| POST   | `/guests/purge`              | ✓    | Force-purge expired guests       |
+| GET    | `/register`                  | ✓    | Registration form                |
+| POST   | `/register`                  | ✓    | Capture frames → save            |
+| GET    | `/register/options/{kind}`   | ✓    | HTMX partial for access-type     |
+| GET    | `/logs`                      | ✓    | HTML audit log                   |
+| GET    | `/api/logs`                  | ✓    | JSON audit log                   |
+| GET    | `/stream`                    | ✓    | MJPEG camera stream               |
+| GET    | `/status/events`             | ✓    | SSE verdict stream               |
+| GET    | `/status/snapshot`           | ✓    | One-shot status JSON              |
+| GET    | `/healthz`                   | —    | Health probe                      |
+| GET    | `/backend/users`             | ✓    | JSON list, with `type`/`include_expired` filters |
+| GET    | `/backend/users/{id}`        | ✓    | JSON get one user                |
+| PUT    | `/backend/users/{id}`        | ✓    | JSON update user                 |
+| DELETE | `/backend/users/{id}`        | ✓    | JSON delete user                 |
+
+See [user-guide.md](user-guide.md) for what each screen does, and [MVP_v1/README.md](../MVP_v1/README.md) for the ML-service-facing internal API contract.

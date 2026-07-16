@@ -1,5 +1,7 @@
 # Testing Status
 
+> **For course/internal use.** This is a course QA-evidence artifact, not customer-facing product documentation. For product setup, architecture, and usage, see the documentation index in the root [README.md](../README.md).
+
 ## Critical Modules and Coverage
 
 | Critical module | Why critical | Required line coverage | Current line coverage | Evidence |
