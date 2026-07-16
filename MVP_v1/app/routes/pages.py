@@ -122,6 +122,36 @@ async def logs_page(
     )
 
 
+@router.get("/logs/table")
+async def logs_table_partial(
+    request: Request,
+    _admin=Depends(require_admin),
+    db: FaceDatabase = Depends(),
+    range: str = Query("all"),
+    q: str | None = Query(None),
+):
+    """HTMX partial — returns just the table HTML for live refresh.
+
+    The logs page polls this endpoint every 5 seconds and swaps the
+    table container without reloading the filters.
+    """
+    today_only = range == "today"
+    week_only = range == "week"
+    entries = db.list_logs(
+        limit=300,
+        today_only=today_only,
+        week_only=week_only,
+        user_filter=q,
+    )
+    return templates.TemplateResponse(
+        request,
+        "partials/logs_table.html",
+        {
+            "entries": entries,
+        },
+    )
+
+
 @router.get("/healthz")
 async def healthz():
     return {"status": "ok"}

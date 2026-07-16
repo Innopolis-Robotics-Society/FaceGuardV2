@@ -1,0 +1,47 @@
+{# HTMX partial — table only, no filters.
+   Polled every 5 seconds from logs.html via hx-get="/logs/table".
+   Current filters (range, q) are forwarded by the hx-vals attribute on
+   the parent container. #}
+{% if entries %}
+<table>
+  <thead>
+    <tr>
+      <th>TIME</th>
+      <th>NAME</th>
+      <th class="col-center">TYPE</th>
+      <th class="col-center">SCORE</th>
+      <th class="col-center">LIVENESS</th>
+      <th>RESULT</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in entries %}
+    <tr class="log-row">
+      <td class="mono">{{ e.timestamp|localdt('%m-%d %H:%M:%S') }}</td>
+      <td>
+        <a href="/logs?q={{ e.name }}">{{ e.name }}</a>
+      </td>
+      <td class="col-center">
+        <span class="badge {{ e.access_type }}">{{ e.access_type }}</span>
+      </td>
+      <td class="col-center {% if e.score is not none and e.score < 0.3 %}log-denied{% endif %}">
+        {{ '%.3f'|format(e.score) if e.score is not none else '—' }}
+      </td>
+      <td class="col-center">
+        {% if e.liveness_passed is none %}<span class="muted">—</span>
+        {% elif e.liveness_passed %}<span class="log-ok">✓</span>
+        {% else %}<span class="log-denied">✕</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if e.success %}<span class="log-ok">✓ granted</span>
+        {% else %}<span class="log-denied">✕ denied</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted small" style="padding:24px;">No log entries match the filter.</p>
+{% endif %}
