@@ -11,41 +11,42 @@
 
   <aside class="page-fill">
     <h3>New person</h3>
-    <form id="register-form"
-          hx-post="/register"
-          hx-target="#register-result"
-          hx-swap="innerHTML"
-          hx-disabled-elt="#submit-btn"
-          style="display:flex; flex-direction:column; gap:0;">
-      <label>
-        Full name
-        <input type="text" name="name" required
-               placeholder="Surname Firstname">
-      </label>
-
-      <fieldset>
-        <legend>Access</legend>
+    <div class="card">
+      <form id="register-form"
+            hx-post="/register"
+            hx-target="#register-result"
+            hx-swap="innerHTML"
+            hx-disabled-elt="#submit-btn">
         <label>
-          <input type="radio" name="access_type" value="permanent" checked
-                 hx-get="/register/options/permanent" hx-target="#guest-options"
-                 hx-swap="innerHTML">
-          <span>Permanent</span>
+          Full name
+          <input type="text" name="name" required
+                 placeholder="Surname Firstname">
         </label>
-        <label>
-          <input type="radio" name="access_type" value="temporary"
-                 hx-get="/register/options/temporary" hx-target="#guest-options"
-                 hx-swap="innerHTML">
-          <span>Temporary</span>
-        </label>
-      </fieldset>
 
-      <div id="guest-options"></div>
+        <fieldset>
+          <legend>Access type</legend>
+          <label>
+            <input type="radio" name="access_type" value="permanent" checked
+                   hx-get="/register/options/permanent" hx-target="#guest-options"
+                   hx-swap="innerHTML">
+            <span>Permanent</span>
+          </label>
+          <label>
+            <input type="radio" name="access_type" value="temporary"
+                   hx-get="/register/options/temporary" hx-target="#guest-options"
+                   hx-swap="innerHTML">
+            <span>Temporary</span>
+          </label>
+        </fieldset>
 
-      <button id="submit-btn" type="submit">Capture &amp; register</button>
-      <small class="muted">{{ frame_count }} frames at ~0.4s intervals.</small>
-    </form>
+        <div id="guest-options"></div>
 
-    <div id="register-result"></div>
+        <button id="submit-btn" type="submit" class="primary">Capture &amp; register</button>
+        <small class="muted">{{ frame_count }} frames at ~0.4s intervals.</small>
+      </form>
+
+      <div id="register-result"></div>
+    </div>
   </aside>
 </div>
 {% endblock %}

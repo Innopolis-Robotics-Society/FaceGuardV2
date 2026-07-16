@@ -94,16 +94,29 @@ async def logs_page(
     request: Request,
     _admin=Depends(require_admin),
     db: FaceDatabase = Depends(),
-    today: bool = Query(False),
+    range: str = Query("all"),
     q: str | None = Query(None),
+    today: bool = Query(False),  # legacy, kept for old bookmarks
 ):
-    entries = db.list_logs(limit=300, today_only=today, user_filter=q)
+    """Render the access-log page.
+
+    ``range`` accepts 'today', 'week', or 'all'. The legacy ``today``
+    boolean is still respected for backwards compatibility.
+    """
+    today_only = today or range == "today"
+    week_only = range == "week"
+    entries = db.list_logs(
+        limit=300,
+        today_only=today_only,
+        week_only=week_only,
+        user_filter=q,
+    )
     return templates.TemplateResponse(
         request,
         "logs.html",
         {
             "entries": entries,
-            "today_filter": today,
+            "range": range if range in ("today", "week", "all") else "all",
             "query": q or "",
         },
     )

@@ -426,13 +426,24 @@ class FaceDatabase:
         limit: int = 200,
         today_only: bool = False,
         user_filter: str | None = None,
+        week_only: bool = False,
     ) -> list[LogEntry]:
+        """List audit-log entries, optionally filtered by name and/or time range.
+
+        - ``today_only=True`` — entries from today only.
+        - ``week_only=True`` — entries from the last 7 days.
+        - ``user_filter`` — case-insensitive substring match on the name column.
+        """
         query = "SELECT * FROM logs"
         clauses: list[str] = []
         params: list[object] = []
 
         if today_only:
             clauses.append("DATE(timestamp) = DATE('now')")
+        if week_only:
+            cutoff = datetime.now(UTC) - timedelta(days=7)
+            clauses.append("timestamp >= ?")
+            params.append(_to_iso(cutoff))
         if user_filter:
             clauses.append("name LIKE ?")
             params.append(f"%{user_filter}%")

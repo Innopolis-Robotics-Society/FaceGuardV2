@@ -3,55 +3,96 @@
 
 {% block content %}
 <div class="page-fill">
-  <form method="get" action="/logs" class="filter-bar">
-    <label>
-      Filter
-      <input type="text" name="q" value="{{ query }}" placeholder="name…">
-    </label>
-    <label>
-      <input type="checkbox" name="today" {% if today_filter %}checked{% endif %}>
-      Today
-    </label>
-    <div>
-      <button type="submit" class="outline small">Apply</button>
-      <a href="/logs" class="button secondary outline small">Reset</a>
-    </div>
-  </form>
+  {# ---------- Filter card ---------- #}
+  <div class="card" style="flex-shrink:0;">
+    <form method="get" action="/logs" id="logs-filter-form">
+      <div class="search-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" name="q" value="{{ query }}"
+               placeholder="Search by name / user..."
+               autocomplete="off">
+      </div>
 
+      <div class="filter-bar" style="margin-top:12px;">
+        <button type="button" class="filter-pill {% if range == 'today' %}active{% endif %}"
+                data-range="today">Today</button>
+        <button type="button" class="filter-pill {% if range == 'week' %}active{% endif %}"
+                data-range="week">This Week</button>
+        <button type="button" class="filter-pill {% if range == 'all' %}active{% endif %}"
+                data-range="all">All time</button>
+        <input type="hidden" name="range" id="range-input" value="{{ range }}">
+        <div class="spacer"></div>
+        <div class="actions">
+          <a href="/logs" class="button outline">Reset</a>
+          <button type="submit" class="button primary">Apply</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {# ---------- Logs table ---------- #}
   <div class="table-wrap">
     {% if entries %}
     <table>
       <thead>
         <tr>
-          <th>Time</th>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Score</th>
-          <th>Liveness</th>
-          <th>Result</th>
+          <th>TIME <span class="sort-icon">↕</span></th>
+          <th>NAME <span class="sort-icon">↕</span></th>
+          <th class="col-center">TYPE <span class="sort-icon">↕</span></th>
+          <th class="col-center">SCORE <span class="sort-icon">↕</span></th>
+          <th class="col-center">LIVENESS <span class="sort-icon">↕</span></th>
+          <th>RESULT <span class="sort-icon">↕</span></th>
         </tr>
       </thead>
       <tbody>
         {% for e in entries %}
-        <tr class="log-row {% if e.success %}log-ok{% else %}log-denied{% endif %}">
-          <td>{{ e.timestamp|localdt('%m-%d %H:%M:%S') }}</td>
-          <td>{{ e.name }}</td>
-          <td>{{ e.access_type }}</td>
-          <td>{{ '%.3f'|format(e.score) if e.score is not none else '—' }}</td>
+        <tr class="log-row">
+          <td class="mono">{{ e.timestamp|localdt('%m-%d %H:%M:%S') }}</td>
           <td>
-            {% if e.liveness_passed is none %}—
-            {% elif e.liveness_passed %}✓
-            {% else %}✗
+            <a href="/logs?q={{ e.name }}">{{ e.name }}</a>
+          </td>
+          <td class="col-center">
+            <span class="badge {{ e.access_type }}">{{ e.access_type }}</span>
+          </td>
+          <td class="col-center {% if e.score is not none and e.score < 0.3 %}log-denied{% endif %}">
+            {{ '%.3f'|format(e.score) if e.score is not none else '—' }}
+          </td>
+          <td class="col-center">
+            {% if e.liveness_passed is none %}<span class="muted">—</span>
+            {% elif e.liveness_passed %}<span class="log-ok">✓</span>
+            {% else %}<span class="log-denied">✕</span>
             {% endif %}
           </td>
-          <td>{% if e.success %}✓ granted{% else %}✗ denied{% endif %}</td>
+          <td>
+            {% if e.success %}<span class="log-ok">✓ granted</span>
+            {% else %}<span class="log-denied">✕ denied</span>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
     {% else %}
-    <p class="muted small" style="padding:0.75rem">No log entries match the filter.</p>
+    <p class="muted small" style="padding:24px;">No log entries match the filter.</p>
     {% endif %}
   </div>
 </div>
+
+<script>
+  // Quick-filter pills update the hidden range input and auto-submit.
+  document.querySelectorAll('.filter-pill').forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      document.querySelectorAll('.filter-pill').forEach(function (p) {
+        p.classList.remove('active');
+      });
+      pill.classList.add('active');
+      document.getElementById('range-input').value = pill.dataset.range;
+      document.getElementById('logs-filter-form').submit();
+    });
+  });
+</script>
 {% endblock %}

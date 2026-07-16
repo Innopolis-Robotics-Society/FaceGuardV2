@@ -19,25 +19,25 @@ function applyVerdict(data) {
     case "granted":
       verdictText.textContent = "Access granted: " + (data.name || "User");
       verdictMeta.textContent = `${data.access_type || ""} · score ${(data.score || 0).toFixed(3)}`;
-      if (doorStatus) { doorStatus.textContent = "Open"; doorStatus.style.color = "#2e7d32"; }
+      if (doorStatus) { doorStatus.textContent = "Open"; doorStatus.style.color = "#5cd36b"; }
       if (servoState) servoState.textContent = "Triggered";
       break;
     case "denied":
       verdictText.textContent = "Access denied";
       verdictMeta.textContent = `score ${(data.score || 0).toFixed(3)}`;
-      if (doorStatus) { doorStatus.textContent = "Locked"; doorStatus.style.color = "#c62828"; }
+      if (doorStatus) { doorStatus.textContent = "Locked"; doorStatus.style.color = "#ff5f73"; }
       if (servoState) servoState.textContent = "Idle";
       break;
     case "idle":
       verdictText.textContent = "Waiting for face...";
       verdictMeta.textContent = "";
-      if (doorStatus) { doorStatus.textContent = "Locked"; doorStatus.style.color = "#6b7280"; }
+      if (doorStatus) { doorStatus.textContent = "Locked"; doorStatus.style.color = "#7f8ea8"; }
       if (servoState) servoState.textContent = "Idle";
       break;
     case "liveness_check":
       verdictText.textContent = "Liveness check: please blink";
-      verdictMeta.textContent = `name ${data.name || ""} · score ${(data.score || 0).toFixed(3)}`;
-      if (doorStatus) { doorStatus.textContent = "Locked"; doorStatus.style.color = "#f9a825"; }
+      verdictMeta.textContent = `${data.name || ""} · ${(data.score || 0).toFixed(3)}`;
+      if (doorStatus) { doorStatus.textContent = "Locked"; doorStatus.style.color = "#c8872f"; }
       if (servoState) servoState.textContent = "Idle";
       break;
     case "error":
@@ -77,11 +77,11 @@ async function pollHealth() {
     const r = await fetch("/status/snapshot");
     const data = await r.json();
     mlStatus.textContent = data.ml_healthy ? "Online" : "Offline";
-    mlStatus.style.color = data.ml_healthy ? "#2e7d32" : "#c62828";
+    mlStatus.style.color = data.ml_healthy ? "#5cd36b" : "#ff5f73";
     applyVerdict(data);
   } catch (e) {
     mlStatus.textContent = "Unknown";
-    mlStatus.style.color = "#6b7280";
+    mlStatus.style.color = "#7f8ea8";
   }
 }
 

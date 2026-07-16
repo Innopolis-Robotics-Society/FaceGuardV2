@@ -5,7 +5,7 @@
 <div class="page-fill">
   <div class="section-header">
     <p class="muted small">Permanent ({{ users|length }}) · Guests ({{ guests|length }})</p>
-    <a href="/register" class="button small">+ Register</a>
+    <a href="/register" class="button primary small">+ Register</a>
   </div>
 
   <div class="grid grid-1-1">
@@ -15,19 +15,24 @@
         {% if users %}
         <table>
           <thead>
-            <tr><th>ID</th><th>Name</th><th>Registered</th><th></th></tr>
+            <tr>
+              <th>ID</th>
+              <th>NAME</th>
+              <th>REGISTERED</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             {% for u in users %}
             <tr>
-              <td>{{ u.id }}</td>
+              <td class="mono">{{ u.id }}</td>
               <td><a href="/users/{{ u.id }}">{{ u.name }}</a></td>
-              <td>{{ u.created_at|localdt }}</td>
+              <td class="muted">{{ u.created_at|localdt }}</td>
               <td>
                 <form method="post" action="/users/{{ u.id }}/delete"
                       onsubmit="return confirm('Delete user {{ u.name|e }}?');"
                       style="margin:0">
-                  <button class="outline secondary small" type="submit">Delete</button>
+                  <button class="outline small" type="submit">Delete</button>
                 </form>
               </td>
             </tr>
@@ -35,7 +40,7 @@
           </tbody>
         </table>
         {% else %}
-        <p class="muted small" style="padding:0.5rem">No permanent users.</p>
+        <p class="muted small" style="padding:16px;">No permanent users.</p>
         {% endif %}
       </div>
     </section>
@@ -46,19 +51,24 @@
         {% if guests %}
         <table>
           <thead>
-            <tr><th>ID</th><th>Name</th><th>Expires</th><th></th></tr>
+            <tr>
+              <th>ID</th>
+              <th>NAME</th>
+              <th>EXPIRES</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             {% for g in guests %}
             <tr>
-              <td>{{ g.id }}</td>
+              <td class="mono">{{ g.id }}</td>
               <td><a href="/users/{{ g.id }}">{{ g.name }}</a></td>
-              <td>{{ g.expires_at|localdt }}</td>
+              <td class="muted">{{ g.expires_at|localdt }}</td>
               <td>
                 <form method="post" action="/users/{{ g.id }}/delete"
                       onsubmit="return confirm('Revoke guest {{ g.name|e }}?');"
                       style="margin:0">
-                  <button class="outline secondary small" type="submit">Revoke</button>
+                  <button class="outline small" type="submit">Revoke</button>
                 </form>
               </td>
             </tr>
@@ -66,7 +76,7 @@
           </tbody>
         </table>
         {% else %}
-        <p class="muted small" style="padding:0.5rem">No active guests.</p>
+        <p class="muted small" style="padding:16px;">No active guests.</p>
         {% endif %}
       </div>
     </section>
