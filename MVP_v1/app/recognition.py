@@ -12,7 +12,6 @@ before granting access (when ``liveness_enabled`` is set in config).
 
 from __future__ import annotations
 
-from .leds import LEDController
 import asyncio
 import logging
 import time
@@ -22,6 +21,7 @@ import numpy as np
 
 from .config import get_settings
 from .database import FaceDatabase
+from .leds import LEDController
 from .ml_client import MLClient
 from .servo import Servo
 from .state import CurrentVerdict, SystemState

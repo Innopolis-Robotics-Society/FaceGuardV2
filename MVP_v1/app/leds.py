@@ -1,6 +1,6 @@
 """LED indicator control for Raspberry Pi GPIO."""
+
 import logging
-import threading
 from typing import Protocol
 
 log = logging.getLogger(__name__)
@@ -48,6 +48,7 @@ class GpioLEDs:
 
     def __init__(self, green_pin: int = 27, red_pin: int = 22, yellow_pin: int = 17):
         from gpiozero import LED
+
         self._green = LED(green_pin)
         self._red = LED(red_pin)
         self._yellow = LED(yellow_pin)

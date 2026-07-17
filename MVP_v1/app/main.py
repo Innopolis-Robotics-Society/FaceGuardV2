@@ -17,6 +17,8 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.leds import make_leds
+
 from .auth import bootstrap_admin_from_env
 from .config import Settings, get_settings
 from .database import FaceDatabase
@@ -30,8 +32,6 @@ from .routes import stream as stream_routes
 from .routes import users as users_routes
 from .servo import make_servo
 from .state import state
-from app.leds import make_leds
-
 
 log = logging.getLogger("faceguard")
 
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
         threshold=settings.threshold,
         interval_ms=settings.recognition_interval_ms,
         log_retention_days=settings.log_retention_days,
-        leds = leds,
+        leds=leds,
     )
     await loop.start()
 
