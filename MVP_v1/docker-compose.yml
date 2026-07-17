@@ -8,6 +8,8 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    devices:
+      - /dev/gpiomem:/dev/gpiomem
     env_file:
       - .env
     volumes:

@@ -12,6 +12,7 @@ before granting access (when ``liveness_enabled`` is set in config).
 
 from __future__ import annotations
 
+from .leds import LEDController
 import asyncio
 import logging
 import time

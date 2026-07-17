@@ -30,6 +30,8 @@ from .routes import stream as stream_routes
 from .routes import users as users_routes
 from .servo import make_servo
 from .state import state
+from app.leds import make_leds
+
 
 log = logging.getLogger("faceguard")
 
@@ -50,6 +52,7 @@ async def lifespan(app: FastAPI):
     await ml.start()
 
     servo = make_servo(settings)
+    leds = make_leds(settings)
     log.info("Servo mode: %s", servo.mode)
 
     loop = RecognitionLoop(
@@ -60,6 +63,7 @@ async def lifespan(app: FastAPI):
         threshold=settings.threshold,
         interval_ms=settings.recognition_interval_ms,
         log_retention_days=settings.log_retention_days,
+        leds = leds,
     )
     await loop.start()
 

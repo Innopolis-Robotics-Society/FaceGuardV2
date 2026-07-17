@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     # Enable /debug/seed-user endpoint for offline testing without ML.
     allow_debug_seed: bool = False
 
+    # --- LEDs ---
+    led_mode: Literal["gpio", "emulated"] = "emulated"
+    led_green_pin: int = 17
+    led_red_pin: int = 27
+    led_yellow_pin: int = 22
+    led_grant_duration_sec: float = Field(default=3.0, ge=0.5, le=30.0)
+
     @field_validator("ml_service_url")
     @classmethod
     def _strip_trailing_slash(cls, v: str) -> str:
