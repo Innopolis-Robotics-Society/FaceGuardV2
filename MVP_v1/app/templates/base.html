@@ -12,6 +12,7 @@
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 <body>
+  {% if request.url.path != '/login' %}
   <nav class="topnav">
     <strong>FaceGuard</strong>
     <ul>
@@ -28,6 +29,7 @@
       </li>
     </ul>
   </nav>
+  {% endif %}
 
   <main class="container">
     {% block content %}{% endblock %}
