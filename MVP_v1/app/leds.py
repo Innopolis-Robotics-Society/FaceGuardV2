@@ -46,7 +46,7 @@ class EmulatedLEDs:
 class GpioLEDs:
     mode = "gpio"
 
-    def __init__(self, green_pin: int = 17, red_pin: int = 22, yellow_pin: int = 27):
+    def __init__(self, green_pin: int = 27, red_pin: int = 22, yellow_pin: int = 17):
         from gpiozero import LED
         self._green = LED(green_pin)
         self._red = LED(red_pin)

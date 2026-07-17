@@ -184,6 +184,7 @@ class RecognitionLoop:
                 )
             )
             self._log_verdict_change("liveness_check", f"waiting for blink — {result.name}")
+            self._leds.yellow_on()
 
     async def _grant_access(self, result, face, liveness_passed: bool | None):
         status_msg = (
