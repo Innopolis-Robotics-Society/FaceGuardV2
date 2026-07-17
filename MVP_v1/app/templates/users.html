@@ -19,7 +19,7 @@
               <th>ID</th>
               <th>NAME</th>
               <th>REGISTERED</th>
-              <th></th>
+              <th class="col-action"></th>
             </tr>
           </thead>
           <tbody>
@@ -28,7 +28,7 @@
               <td class="mono">{{ u.id }}</td>
               <td><a href="/users/{{ u.id }}">{{ u.name }}</a></td>
               <td class="muted">{{ u.created_at|localdt }}</td>
-              <td>
+              <td class="col-action">
                 <form method="post" action="/users/{{ u.id }}/delete"
                       onsubmit="return confirm('Delete user {{ u.name|e }}?');"
                       style="margin:0">
@@ -55,7 +55,7 @@
               <th>ID</th>
               <th>NAME</th>
               <th>EXPIRES</th>
-              <th></th>
+              <th class="col-action"></th>
             </tr>
           </thead>
           <tbody>
@@ -64,7 +64,7 @@
               <td class="mono">{{ g.id }}</td>
               <td><a href="/users/{{ g.id }}">{{ g.name }}</a></td>
               <td class="muted">{{ g.expires_at|localdt }}</td>
-              <td>
+              <td class="col-action">
                 <form method="post" action="/users/{{ g.id }}/delete"
                       onsubmit="return confirm('Revoke guest {{ g.name|e }}?');"
                       style="margin:0">

@@ -398,6 +398,15 @@ button.outline,
 }
 button.small,
 .button.small {
+  /* Pico's default button width is 100%; small action buttons (table row
+     actions, "+ Register", "Back") are meant to be compact, not stretch
+     to fill their container. Pico also gives real <button> elements a
+     default margin-bottom (form-field spacing), which throws off
+     vertical centering wherever these sit inline (e.g. table cells) —
+     zero it out explicitly since our own base button rule doesn't win
+     that cascade. */
+  width: auto;
+  margin: 0;
   padding: 4px 10px;
   font-size: 12px;
 }
@@ -516,6 +525,15 @@ table.compact td {
 /* Column alignments */
 th.col-center, td.col-center { text-align: center; }
 th.col-right, td.col-right { text-align: right; }
+
+/* Row-action column (a single button, e.g. Delete/Revoke): shrink to fit
+   its content instead of taking a share of the table's auto-distributed
+   width, and hug the right edge like a conventional actions column. */
+th.col-action, td.col-action {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
 
 /* Log rows */
 .log-row td {
