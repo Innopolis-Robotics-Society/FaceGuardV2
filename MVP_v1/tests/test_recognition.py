@@ -14,7 +14,7 @@ def test_recognition_loop_constructs_with_valid_params():
     ml = MagicMock()
     servo = MagicMock()
     state = MagicMock()
-    leds = MagiMock()
+    leds = MagicMock()
     loop = RecognitionLoop(
         db=db,
         ml=ml,
@@ -44,7 +44,7 @@ async def test_tick_ml_unhealthy_sets_error():
         state=state,
         threshold=0.5,
         interval_ms=1000,
-        leds = MagiMock(),
+        leds = MagicMock(),
     )
     await loop._tick()
 
@@ -70,7 +70,7 @@ async def test_tick_no_faces_sets_idle():
         state=state,
         threshold=0.5,
         interval_ms=1000,
-        leds = MagiMock(),
+        leds = MagicMock(),
     )
     loop._last_health_check = 0
     await loop._tick()
@@ -85,7 +85,7 @@ async def test_tick_granted_triggers_servo():
     ml = MagicMock()
     servo = MagicMock()
     ml.health = AsyncMock(return_value=True)
-    leds = MagiMock(),
+    leds = MagicMock(),
     face = MagicMock()
     face.bbox = [0, 0, 100, 100]
     face.embedding = [0.5] * 512
