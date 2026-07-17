@@ -24,8 +24,8 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 import cv2
-import onnxruntime as ort 
 import numpy as np
+import onnxruntime as ort
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from insightface.app import FaceAnalysis
@@ -118,9 +118,7 @@ def init_model():
             f"Download manually: https://github.com/cunjian/pytorch_face_landmark"
         )
 
-    pfld_session = ort.InferenceSession(
-        model_path, providers=["CPUExecutionProvider"]
-    )
+    pfld_session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
     pfld_input_name = pfld_session.get_inputs()[0].name
     pfld_output_name = pfld_session.get_outputs()[0].name
 
@@ -178,13 +176,14 @@ def _count_valid_blinks(history: deque[tuple[float, float]], now: float) -> int:
 
     return blinks
 
+
 def _preprocess_pfld(crop: np.ndarray) -> np.ndarray:
     img = cv2.resize(crop, (112, 112))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = img.astype(np.float32) / 255.0
-    img = (img - 0.5) / 0.5              
+    img = (img - 0.5) / 0.5
     img = np.transpose(img, (2, 0, 1))
-    return np.expand_dims(img, axis=0) 
+    return np.expand_dims(img, axis=0)
 
 
 def _get_pfld_landmarks(frame: np.ndarray, bbox: np.ndarray) -> np.ndarray | None:
@@ -204,7 +203,7 @@ def _get_pfld_landmarks(frame: np.ndarray, bbox: np.ndarray) -> np.ndarray | Non
 
     input_blob = _preprocess_pfld(crop)
     outputs = pfld_session.run([pfld_output_name], {pfld_input_name: input_blob})
-    landmarks = outputs[0].reshape(-1, 2) 
+    landmarks = outputs[0].reshape(-1, 2)
 
     crop_h, crop_w = crop.shape[:2]
     landmarks[:, 0] = landmarks[:, 0] / 112.0 * crop_w + x1
@@ -212,11 +211,12 @@ def _get_pfld_landmarks(frame: np.ndarray, bbox: np.ndarray) -> np.ndarray | Non
 
     return landmarks
 
+
 def run_inference(frame: np.ndarray) -> dict:
     """Run face detection + liveness on a single frame, return JSON payload."""
     global liveness_valid_until, cached_faces, cached_landmarks, cached_status
     global _last_bbox, _stable_frame_count
-    global _face_mesh_counter 
+    global _face_mesh_counter
 
     h_img, w_img, _ = frame.shape
     current_time = time.time()
@@ -250,7 +250,6 @@ def run_inference(frame: np.ndarray) -> dict:
         else:
             _stable_frame_count = max(0, _stable_frame_count - 2)
     _last_bbox = bbox_tuple
-
 
     is_live = current_time < liveness_valid_until
     landmarks = None
@@ -360,9 +359,13 @@ def draw_frame(frame: np.ndarray) -> np.ndarray:
             ear_avg = (ear_left + ear_right) / 2.0
             if ear_avg > 0:
                 cv2.putText(
-                    display, f"EAR:{ear_avg:.2f}",
+                    display,
+                    f"EAR:{ear_avg:.2f}",
                     (bbox[0], bbox[1] + 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1,
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 255),
+                    1,
                 )
             for idx in LEFT_EYE_IDX + RIGHT_EYE_IDX:
                 x, y = int(landmarks[idx][0]), int(landmarks[idx][1])

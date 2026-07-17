@@ -21,6 +21,7 @@ import numpy as np
 
 from .config import get_settings
 from .database import FaceDatabase
+from .leds import LEDController
 from .ml_client import MLClient
 from .servo import Servo
 from .state import CurrentVerdict, SystemState
@@ -35,6 +36,7 @@ class RecognitionLoop:
         ml: MLClient,
         servo: Servo,
         state: SystemState,
+        leds: LEDController,
         *,
         threshold: float,
         interval_ms: int,
@@ -44,6 +46,7 @@ class RecognitionLoop:
         self._ml = ml
         self._servo = servo
         self._state = state
+        self._leds = leds
         self._threshold = threshold
         self._interval = interval_ms / 1000.0
         self._task: asyncio.Task | None = None
@@ -123,6 +126,7 @@ class RecognitionLoop:
         if not latest.faces:
             self._log_verdict_change("idle", "")
             self._state.update(CurrentVerdict(verdict="idle"))
+            self._leds.all_off()
             return
 
         # Prefer the face flagged as primary by the ML service; fall back
@@ -155,6 +159,7 @@ class RecognitionLoop:
                     liveness_ear=primary.ear,
                 )
             )
+            self._leds.red_on()
             return
 
         # Liveness gate. When disabled, grant immediately.
@@ -179,6 +184,7 @@ class RecognitionLoop:
                 )
             )
             self._log_verdict_change("liveness_check", f"waiting for blink — {result.name}")
+            self._leds.yellow_on()
 
     async def _grant_access(self, result, face, liveness_passed: bool | None):
         status_msg = (
@@ -205,6 +211,11 @@ class RecognitionLoop:
 
         log.info("Granted: name=%s score=%.3f liveness=%s", result.name, result.score, status_msg)
         await asyncio.to_thread(self._servo.open)
+        self._leds.green_on()
+        asyncio.get_event_loop().call_later(
+            self._settings.led_grant_duration_sec,
+            self._leds.all_off,
+        )
         await asyncio.to_thread(
             self._db.add_log,
             result.name,

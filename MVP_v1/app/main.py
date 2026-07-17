@@ -17,6 +17,8 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.leds import make_leds
+
 from .auth import bootstrap_admin_from_env
 from .config import Settings, get_settings
 from .database import FaceDatabase
@@ -50,6 +52,7 @@ async def lifespan(app: FastAPI):
     await ml.start()
 
     servo = make_servo(settings)
+    leds = make_leds(settings)
     log.info("Servo mode: %s", servo.mode)
 
     loop = RecognitionLoop(
@@ -60,6 +63,7 @@ async def lifespan(app: FastAPI):
         threshold=settings.threshold,
         interval_ms=settings.recognition_interval_ms,
         log_retention_days=settings.log_retention_days,
+        leds=leds,
     )
     await loop.start()
 
