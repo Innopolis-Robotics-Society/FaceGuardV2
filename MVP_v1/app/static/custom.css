@@ -107,6 +107,15 @@ body {
   gap: 26px;
   align-items: center;
 }
+.topnav li {
+  display: flex;
+  align-items: center;
+}
+.topnav form {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
 .topnav strong {
   color: var(--fg-text);
   font-size: 18px;
@@ -130,6 +139,7 @@ body {
 }
 .topnav button.logout-btn {
   height: 32px;
+  margin: 0;
   padding: 0 14px;
   font-size: 13px;
   background: transparent;
@@ -290,30 +300,59 @@ input[type="checkbox"] {
   margin: 0 6px 0 0;
 }
 fieldset {
-  border: 1px solid var(--fg-border);
-  border-radius: var(--r-button);
-  padding: 10px 14px;
-  margin: 0 0 10px 0;
-}
-fieldset label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 0;
-  font-size: 13px;
-  color: var(--fg-text-secondary);
-  cursor: pointer;
-}
-fieldset input[type="radio"] {
-  width: auto;
-  margin: 0;
+  border: none;
+  padding: 0;
+  margin: 0 0 14px 0;
 }
 legend {
   font-size: 11px;
   color: var(--fg-text-muted);
-  padding: 0 6px;
+  padding: 0 0 6px 0;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+/* Segmented-control style access-type toggle: fieldset > label(s) each
+   wrapping a radio + span. The native radio is visually hidden but stays
+   in the accessibility tree and keyboard-focusable. */
+fieldset:has(input[type="radio"]) {
+  display: flex;
+  gap: 8px;
+}
+fieldset input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+fieldset label:has(input[type="radio"]) {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 0;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-text-secondary);
+  background: var(--fg-surface);
+  border: 1px solid var(--fg-border);
+  border-radius: var(--r-button);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+fieldset label:has(input[type="radio"]:hover) {
+  border-color: var(--fg-border-strong);
+}
+fieldset label:has(input[type="radio"]:checked) {
+  background: var(--fg-accent);
+  border-color: var(--fg-accent);
+  color: #fff;
+}
+fieldset label:has(input[type="radio"]:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(31, 143, 255, 0.4);
 }
 
 /* ---- Buttons ---- */
@@ -515,14 +554,20 @@ th.col-right, td.col-right { text-align: right; }
   background: #000;
   border-radius: var(--r-card);
   overflow: hidden;
-  height: 100%;
-  min-height: 0;
   border: 1px solid var(--fg-border);
+  /* Match the camera's native 320x240 (4:3) aspect ratio so the box itself
+     is never a different shape than the stream — avoids both cropping
+     (object-fit: cover) and letterboxing (object-fit: contain in a
+     mismatched box). */
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 .video-wrap img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
