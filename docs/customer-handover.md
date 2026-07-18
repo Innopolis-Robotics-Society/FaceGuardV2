@@ -63,7 +63,7 @@ During the Week 7 transition-confirmation session, the customer confirmed satisf
 | Deployment               | The product can be run locally or on Raspberry Pi using the documented setup.                                                                     |
 | Customer-side operation  | Not yet confirmed on customer-owned infrastructure. The trial ran on the team's Raspberry Pi deployment.                                          |
 | Customer independent use | Confirmed. During the Week 7 trial, the customer directly interacted with the live dashboard, LED indicators, and audit log.                      |
-| Ownership transfer       | Repository ownership/admin transfer to the customer is not yet completed. The repository is currently maintained by the team organization.        |
+| Ownership transfer       | Completed. The repository has been transferred to the customer.                                                                                    |
 | Private credentials      | Not stored in the public repository. Private credentials must be shared only through the private submission or customer-approved private channel. |
 | Final transition         | Confirmed. The customer accepted the Week 7 transition (see Section 2).                                                                           |
 
@@ -489,10 +489,7 @@ Independently used by customer
 
 However, the following support may still be needed before a stronger handover level (`Deployed or operated on customer side`) can be claimed:
 
-* finishing the customer-facing documentation and repository cleanup;
-* recording the public sanitized demo video;
-* customer-side Raspberry Pi deployment on the actual lab door, if the customer proceeds with hardware-side operation beyond the course;
-* ownership/admin transfer of the repository to the customer, if pursued post-course.
+* customer-side Raspberry Pi deployment on the actual lab door, if the customer proceeds with hardware-side operation beyond the course.
 
 If the customer deploys or operates the product on their own side, update the handover level accordingly.
 

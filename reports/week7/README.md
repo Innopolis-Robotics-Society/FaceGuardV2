@@ -60,16 +60,17 @@ As documented in `docs/customer-handover.md`:
   release artifacts, documentation, and reports remain available to the customer for inspection
   and independent review;
 * the trial was run and directly used by the customer on the team's Raspberry Pi deployment;
-* repository ownership/admin transfer to the customer, and deployment on customer-owned
-  infrastructure (the physical lab door), have not been carried out and remain intentionally
-  outside this Sprint's scope;
+* repository ownership/admin transfer to the customer has been completed;
+* deployment on customer-owned infrastructure (the physical lab door) has not been carried out
+  and remains intentionally outside this Sprint's scope;
 * no private credentials, real biometric data, or private access details were shared through the
   public repository.
 
 ## Remaining transition blockers, limitations, and follow-up items (Part 8)
 
-* Customer-facing documentation and repository cleanup are still being finished.
-* The public sanitized demo video has not yet been recorded.
+* Repository cleanup is still being finished.
+* The public sanitized demo video is expected to be recorded shortly but has not been recorded
+  as of this review.
 * Long-term deployment/operation on customer-owned infrastructure was not part of this session
   and remains a post-course consideration if pursued; it was not attempted because it falls
   outside the course transition scope, not because of a technical or customer-side blocker.
