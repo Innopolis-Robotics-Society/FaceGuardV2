@@ -39,20 +39,20 @@ MVP_v0/
 Current handover level:
 
 ```text
-Ready for independent use
+Independently used by customer
 ```
 
-This means that the repository, setup instructions, runnable product version, and customer-facing documentation are prepared so that the customer can inspect and run the product using the documented steps.
+This means that, beyond having a runnable product version and customer-facing documentation available, the customer directly interacted with the running trial during the Week 7 session — exercising the live dashboard, the LED status indicators, and the audit log — rather than only observing a team-led walkthrough.
 
 ### Customer confirmation status
 
 Current customer-confirmation status:
 
 ```text
-Not yet accepted
+Accepted
 ```
 
-At the time of this document update, final Week 7 acceptance has not yet been confirmed. The product is prepared as a trial / handover-candidate version for customer review. The final confirmation status must be updated after the Week 7 transition confirmation.
+During the Week 7 transition-confirmation session, the customer confirmed satisfaction with the current state of the project and explicitly accepted this document as sufficient for the reached handover level. Final documentation polish and the public demo video recording remain open follow-up items (see Section 11 and Section 13) but are not blockers to this acceptance.
 
 ### Current transition state
 
@@ -61,11 +61,11 @@ At the time of this document update, final Week 7 acceptance has not yet been co
 | Repository access        | The public repository is available through the FaceGuardV2 GitHub repository.                                                                     |
 | Product access           | The product can be accessed through the latest GitHub release or by running `MVP_v1/` locally with Docker Compose.                                |
 | Deployment               | The product can be run locally or on Raspberry Pi using the documented setup.                                                                     |
-| Customer-side operation  | Not yet confirmed.                                                                                                                                |
-| Customer independent use | Not yet confirmed.                                                                                                                                |
+| Customer-side operation  | Not yet confirmed on customer-owned infrastructure. The trial ran on the team's Raspberry Pi deployment.                                          |
+| Customer independent use | Confirmed. During the Week 7 trial, the customer directly interacted with the live dashboard, LED indicators, and audit log.                      |
 | Ownership transfer       | Repository ownership/admin transfer to the customer is not yet completed. The repository is currently maintained by the team organization.        |
 | Private credentials      | Not stored in the public repository. Private credentials must be shared only through the private submission or customer-approved private channel. |
-| Final transition         | Pending Week 7 confirmation.                                                                                                                      |
+| Final transition         | Confirmed. The customer accepted the Week 7 transition (see Section 2).                                                                           |
 
 ## 3. Repository and ownership arrangements
 
@@ -457,8 +457,8 @@ The current product is a course MVP and has the following limitations:
 * Private credentials and real deployment details are not included in public documentation.
 * HTTPS termination is not provided directly by the application and should be handled by deployment infrastructure if needed.
 * Multi-admin operational management is limited.
-* Customer-side deployment and independent long-term operation are not yet confirmed.
-* Final customer acceptance is pending Week 7 transition confirmation.
+* Long-term deployment and operation on customer-owned infrastructure (e.g. the physical lab door) has not yet been confirmed; the Week 7 trial ran on the team's Raspberry Pi deployment.
+* Final customer acceptance was confirmed during Week 7 (see Section 2).
 
 ## 12. Documentation entry points
 
@@ -484,19 +484,17 @@ The current product is a course MVP and has the following limitations:
 The current documentation set is sufficient for the reached handover level:
 
 ```text
-Ready for independent use
+Independently used by customer
 ```
 
-However, the following support may still be needed before stronger handover levels can be claimed:
+However, the following support may still be needed before a stronger handover level (`Deployed or operated on customer side`) can be claimed:
 
-* customer-side trial using the Week 6 trial release;
-* final customer confirmation in Week 7;
-* confirmation that the customer can access and follow the setup instructions;
-* customer-side Raspberry Pi deployment verification, if the customer wants hardware-side operation;
-* confirmation that the customer accepts the current limitations;
-* final update of this document after Week 7 feedback.
+* finishing the customer-facing documentation and repository cleanup;
+* recording the public sanitized demo video;
+* customer-side Raspberry Pi deployment on the actual lab door, if the customer proceeds with hardware-side operation beyond the course;
+* ownership/admin transfer of the repository to the customer, if pursued post-course.
 
-If the customer independently uses the product, deploys it, or operates it on their side, update the handover level accordingly.
+If the customer deploys or operates the product on their own side, update the handover level accordingly.
 
 ## 14. Status update procedure
 
