@@ -1,5 +1,7 @@
 # Definition of Done (DoD)
 
+> **For course/internal use.** This document defines the team's engineering completion standard and is not customer-facing product documentation. For product setup, architecture, and usage, see the documentation index in the root [README.md](../README.md).
+
 This document defines the shared minimum completion standard for all Product Backlog Items (PBIs) in the FaceGuardV2 repository. A PBI may be marked `Done` only when both its issue-specific acceptance criteria **and** every applicable item in this Definition of Done are satisfied.
 
 ## 1. Implementation & Code Quality

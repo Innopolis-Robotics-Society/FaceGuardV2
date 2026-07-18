@@ -1,5 +1,7 @@
 # FaceGuardV2 - Week 2 Report
 
+> **For course/internal use.** This is a dated weekly course-assignment report, kept as historical evidence, not customer-facing product documentation. For current product setup and architecture, see the documentation index in the root [README.md](../../README.md).
+
 ## Project Overview
 
 **FaceGuardV2** is a real-time face-recognition access control system built on a Raspberry Pi 5 with a camera module. The system detects a face, extracts its embedding using InsightFace, compares it against a database of registered users, and decides whether to grant or deny access. On successful recognition, a servo motor rotates to physically unlock the door. The system is packaged with Docker and runs on both Raspberry Pi (ARM) and a regular laptop (x86), with the servo visually emulated in the interface on x86 platforms.

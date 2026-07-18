@@ -27,79 +27,74 @@ so the admin can see what the camera sees from their laptop.
 
 ### States
 
-The verdict overlay reflects the current state of the recognition loop.
+A single recognition **verdict** (`idle` / `liveness_check` / `granted` /
+`denied`) drives three separate visual indicators on the dashboard at
+once: the camera overlay text, the "Door" status field, and the "Servo"
+status field. They read the same event but don't carry the same level of
+detail — the tables below give the exact text/colour for each, side by
+side, since that's easy to lose track of when reading the three UI
+elements separately.
 
-#### 1.1 Idle (no face detected)
+> Note: a `scanning` CSS class and colour also exist in the stylesheet
+> from an earlier design, but the recognition loop never actually emits
+> a `scanning` verdict — the transition state users actually see is
+> `liveness_check`. Treat `scanning` as dead styling, not a real state.
 
-- **Overlay colour:** grey
-- **Text:** `Waiting for face...`
-- Door stays locked, servo idle.
+#### 1.1 Camera overlay (text shown on the video feed)
 
-```
-┌─────────────────────┐
-│  [Camera feed]      │
-│                     │
-│                     │
-└─────────────────────┘
-   Waiting for face...
-        (grey)
-```
+| Verdict | Overlay text | Meta line | Colour |
+|---|---|---|---|
+| `idle` | `Waiting for face...` | — | Grey |
+| `liveness_check` | `Liveness check: please blink` | `{name} · score {score:.3f}` | Yellow |
+| `granted` | `Access granted: {Name}` | `{access_type} · score {score:.3f}` | Green |
+| `denied` | `Access denied` | `score {score:.3f}` | Red |
 
-#### 1.2 Scanning (face detected, comparison in flight)
+#### 1.2 Door status (dashboard status panel, "Door" row)
 
-- **Overlay colour:** yellow
-- **Text:** `Scanning...`
-- Brief — lasts one recognition tick (≤ `RECOGNITION_INTERVAL_MS`).
+| Verdict | Text | Colour |
+|---|---|---|
+| `idle` | `Locked` | Grey |
+| `liveness_check` | `Locked` | Yellow |
+| `denied` | `Locked` | Red |
+| `granted` | `Opened` | Green |
 
-#### 1.3 Granted (known user / guest)
+#### 1.3 Servo status (dashboard status panel, "Servo" row)
 
-- **Overlay colour:** green
-- **Text:** `Access granted: {Name}`
-- **Meta:** `{access_type} · score {score:.3f}`
-- Door status flips to "Open".
-- Servo rotates to the open position for `SERVO_OPEN_DURATION_SEC`, then
-  returns. On x86 (no GPIO), the servo state is reflected in the status
-  panel as "Triggered (open)".
+| Verdict | Text | Colour |
+|---|---|---|
+| `idle`, `denied`, `liveness_check` | `Idle` | Grey |
+| `granted` | `Triggered` | Grey — **unchanged from `Idle`; the servo field carries no colour coding at all today**, unlike the door status and camera overlay above. |
 
-```
-┌─────────────────────┐
-│  [Camera feed]      │
-│   ┌─────────┐       │
-│   │  face   │       │
-│   └─────────┘       │
-│  Access granted:    │
-│  Ivanov Petr        │
-│  user · 0.821       │
-└─────────────────────┘
-        (green)
-```
+The servo field only ever reports the mechanical actuator's own state
+(idle vs. actuated) rather than the semantic access decision, which is
+why it doesn't need the same colour split as the door status and camera
+overlay — those two describe *why* the door is locked or open, while the
+servo field describes *what the motor is physically doing*.
 
-#### 1.4 Denied (face seen but no match above threshold)
-
-- **Overlay colour:** red
-- **Text:** `Access denied: Unknown`
-- **Meta:** `score {best:.3f}`
-- Door stays locked. Audit log entry written (`success=false`).
+### Mockups
 
 ```
-┌─────────────────────┐
-│  [Camera feed]      │
-│   ┌─────────┐       │
-│   │  face   │       │
-│   └─────────┘       │
-│  Access denied:     │
-│  Unknown            │
-│  score 0.312        │
-└─────────────────────┘
-        (red)
+┌─────────────────────┐        ┌─────────────────────┐
+│  [Camera feed]      │        │  [Camera feed]      │
+│                     │        │   ┌─────────┐       │
+│                     │        │   │  face   │       │
+└─────────────────────┘        │   └─────────┘       │
+   Waiting for face...         │  Access granted:    │
+        (grey)                 │  Ivanov Petr        │
+                                │  user · 0.821       │
+                                └─────────────────────┘
+                                        (green)
+
+┌─────────────────────┐        ┌─────────────────────┐
+│  [Camera feed]      │        │  [Camera feed]      │
+│   ┌─────────┐       │        │   ┌─────────┐       │
+│   │  face   │       │        │   │  face   │       │
+│   └─────────┘       │        │   └─────────┘       │
+│  Liveness check:    │        │  Access denied      │
+│  please blink       │        │  score 0.312        │
+└─────────────────────┘        └─────────────────────┘
+        (yellow)                       (red)
 ```
-
-#### 1.5 Error (ML service unreachable / loop crashed)
-
-- **Overlay colour:** dark red
-- **Text:** `System error`
-- **Meta:** short diagnostic (e.g. `ML service unreachable`)
-- Status panel shows `ML service: Offline`.
 
 ---
 
@@ -231,16 +226,48 @@ equivalents in MVP v1:
   on the dashboard shows `Servo: Triggered (open)` for the same duration,
   replicating the timing of the physical actuator.
 
-### LED indicators (planned for v2)
+### LED indicators
 
-Customer-requested LED feedback (green=granted, red=denied, yellow=scanning)
-is documented but not yet wired in MVP v1. The verdict overlay colour
-scheme mirrors the planned LED colours so the visual feedback contract is
-already stable.
+Customer-requested physical LED feedback (green=granted, red=denied,
+yellow=liveness check in progress, all off=idle) is implemented in
+`app/leds.py` and driven from the same verdict value already used for the
+door status and camera overlay in [§1](#1-live-display-web) — so the
+physical LEDs and the on-screen overlay always agree. `gpio` mode drives
+real LEDs via `gpiozero.LED` on Raspberry Pi; `emulated` mode logs the
+state change instead (used for local development). Selected by `LED_MODE`;
+pins and grant-LED duration are configurable — see
+[configuration.md](configuration.md).
 
 ---
 
 ## 6. API summary
 
-All admin endpoints require a valid session cookie. See `README.md` for
-the full HTTP method / path table.
+All admin endpoints require a valid session cookie (except `/login` and `/healthz`).
+
+| Method | Path                         | Auth | Purpose                          |
+|--------|------------------------------|------|-----------------------------------|
+| GET    | `/login`                     | —    | Login form                       |
+| POST   | `/login`                     | —    | Submit credentials               |
+| POST   | `/logout`                    | ✓    | End session                      |
+| GET    | `/`                          | ✓    | Live dashboard                   |
+| GET    | `/users`                     | ✓    | Users + guests list              |
+| GET    | `/users/{id}`                | ✓    | User detail + edit page          |
+| POST   | `/users/{id}/update`         | ✓    | Update user from detail page     |
+| POST   | `/users/{id}/delete`         | ✓    | Delete permanent user            |
+| POST   | `/guests/{id}/delete`        | ✓    | Revoke guest                     |
+| POST   | `/guests/purge`              | ✓    | Force-purge expired guests       |
+| GET    | `/register`                  | ✓    | Registration form                |
+| POST   | `/register`                  | ✓    | Capture frames → save            |
+| GET    | `/register/options/{kind}`   | ✓    | HTMX partial for access-type     |
+| GET    | `/logs`                      | ✓    | HTML audit log                   |
+| GET    | `/api/logs`                  | ✓    | JSON audit log                   |
+| GET    | `/stream`                    | ✓    | MJPEG camera stream               |
+| GET    | `/status/events`             | ✓    | SSE verdict stream               |
+| GET    | `/status/snapshot`           | ✓    | One-shot status JSON              |
+| GET    | `/healthz`                   | —    | Health probe                      |
+| GET    | `/backend/users`             | ✓    | JSON list, with `type`/`include_expired` filters |
+| GET    | `/backend/users/{id}`        | ✓    | JSON get one user                |
+| PUT    | `/backend/users/{id}`        | ✓    | JSON update user                 |
+| DELETE | `/backend/users/{id}`        | ✓    | JSON delete user                 |
+
+See [user-guide.md](user-guide.md) for what each screen does, and [MVP_v1/README.md](../MVP_v1/README.md) for the ML-service-facing internal API contract.

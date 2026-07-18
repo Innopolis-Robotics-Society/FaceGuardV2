@@ -1,5 +1,7 @@
 # Quality Requirements
 
+> **For course/internal use.** This is a course quality-engineering artifact, not customer-facing product documentation. For product setup, architecture, and usage, see the documentation index in the root [README.md](../README.md).
+
 FaceGuardV2 quality requirements.
 
 ## Table of Contents

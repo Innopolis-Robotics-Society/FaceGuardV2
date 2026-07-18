@@ -1,5 +1,7 @@
 # Process Requirements
 
+> **For course/internal use.** Legacy process note, largely superseded by [development-process.md](development-process.md). Not customer-facing product documentation.
+
 ## PBI types used:
 
 ### User Story - functional requirement expressed as role / action / value

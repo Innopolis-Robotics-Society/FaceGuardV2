@@ -1,5 +1,7 @@
 # Quality Requirement Tests
 
+> **For course/internal use.** This is a course QA-evidence artifact, not customer-facing product documentation. For product setup, architecture, and usage, see the documentation index in the root [README.md](../README.md).
+
 ## Table of Contents
 
 1. [QRT-001: Registered user recognition](#qrt-001-registered-user-recognition)

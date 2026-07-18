@@ -1,5 +1,7 @@
 # User Acceptance Tests
 
+> **For course/internal use.** This is a course acceptance-evidence artifact, not customer-facing product documentation. For product setup, architecture, and usage, see the documentation index in the root [README.md](../README.md).
+
 ## Table of Contents
 - [UAT Scenarios](#uat-scenarios)
 - [Execution Results — Sprint 2](#execution-results--sprint-2)
