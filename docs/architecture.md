@@ -97,6 +97,8 @@ The servo is accessed through a small abstraction with two interchangeable imple
 
 The mode is selected by `SERVO_MODE` (see [configuration.md](configuration.md)).
 
+LED status indicators (`MVP_v1/app/leds.py`) follow the same `gpio`/`emulated` split, selected by `LED_MODE`. They're driven directly from the recognition loop's verdict: yellow while a liveness check is pending, green on access granted (auto-off after `LED_GRANT_DURATION_SEC`), red on access denied, all off when idle — mirroring the dashboard's verdict-overlay color scheme.
+
 ## Deployment topology
 
 The product runs as two Docker Compose services:
@@ -113,7 +115,6 @@ For deployment steps, see [deployment-raspberry-pi.md](deployment-raspberry-pi.m
 - Single-host deployment — SQLite and direct device access (`/dev/video0`, GPIO) mean this does not scale horizontally.
 - Single admin account bootstrapped from environment — no self-service multi-admin management yet.
 - No HTTPS termination built in — put a reverse proxy in front if exposing beyond a trusted local network, and set `SESSION_COOKIE_SECURE=True`.
-- LED status indicators are planned but not yet implemented; the dashboard's verdict-overlay color scheme (grey/yellow/green/red) mirrors the intended LED colors.
 
 ## Further reading
 

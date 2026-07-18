@@ -226,14 +226,17 @@ equivalents in MVP v1:
   on the dashboard shows `Servo: Triggered (open)` for the same duration,
   replicating the timing of the physical actuator.
 
-### LED indicators (planned for v2)
+### LED indicators
 
-Customer-requested LED feedback (green=granted, red=denied,
-yellow=liveness check) is documented but not yet wired in MVP v1. The
-verdict overlay colour scheme in [§1](#1-live-display-web) mirrors the
-planned LED colours so the visual feedback contract is already stable —
-implementing the LEDs should be a matter of driving them from the same
-verdict value already used for the door status and camera overlay.
+Customer-requested physical LED feedback (green=granted, red=denied,
+yellow=liveness check in progress, all off=idle) is implemented in
+`app/leds.py` and driven from the same verdict value already used for the
+door status and camera overlay in [§1](#1-live-display-web) — so the
+physical LEDs and the on-screen overlay always agree. `gpio` mode drives
+real LEDs via `gpiozero.LED` on Raspberry Pi; `emulated` mode logs the
+state change instead (used for local development). Selected by `LED_MODE`;
+pins and grant-LED duration are configurable — see
+[configuration.md](configuration.md).
 
 ---
 

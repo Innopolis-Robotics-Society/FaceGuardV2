@@ -112,20 +112,20 @@ TODO (Part 13 owner)
 
 ## Sprint Review (Part 10)
 
-[reports/week7/sprint-review-transcript.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week7/sprint-review-transcript.md)
-[reports/week7/sprint-review-summary.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week7/sprint-review-summary.md)
+[reports/week7/sprint-review-transcript.md](sprint-review-transcript.md)
+[reports/week7/sprint-review-summary.md](sprint-review-summary.md)
 
 The Week 7 Sprint Review covered: the planned Sprint 5 Goal, the delivered `MVP v3` changes,
 resolved and unresolved follow-up issues from Week 6 (frame rate, UI/UX, backend overhead,
 threshold tuning, documentation, repository cleanup), the final transition status and usefulness,
 customer use/operational status, and remaining risks and post-course limitations. See
-[reports/week7/sprint-review-summary.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week7/sprint-review-summary.md)
+[reports/week7/sprint-review-summary.md](sprint-review-summary.md)
 for the full breakdown.
 
 # Links
-[reports/week7/reflection.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week7/reflection.md)
-[reports/week7/retrospective.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week7/retrospective.md)
-[reports/week7/llm-report.md](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/blob/main/reports/week7/llm-report.md)
+reports/week7/reflection.md — TODO (Part 12 owner)
+reports/week7/retrospective.md — TODO (Part 11 owner)
+reports/week7/llm-report.md — TODO (Part 12 owner)
 
 # Summary of the final product status
 TODO (Part 7 owner)

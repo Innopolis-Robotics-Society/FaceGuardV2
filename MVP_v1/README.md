@@ -35,6 +35,7 @@ MVP_v1/
 │   ├── auth.py                # session auth + bcrypt
 │   ├── ml_client.py          # async HTTP client to the ML service
 │   ├── servo.py               # GpioServo + EmulatedServo
+│   ├── leds.py                 # GpioLEDs + EmulatedLEDs (status indicators)
 │   ├── state.py               # in-memory verdict state + SSE pub/sub
 │   ├── recognition.py        # background poller + register_one()
 │   ├── jinja.py                # Jinja2 environment setup
@@ -140,7 +141,6 @@ The ML service is the sole owner of the camera. The backend never opens `/dev/vi
 
 ## Known limitations
 
-- **No LED indicators** — wiring is straightforward but not yet implemented in the backend (planned; the dashboard verdict colors mirror the intended LED scheme).
 - **Single admin** — multi-admin management isn't built yet; additional admins currently require inserting directly via `FaceDatabase.add_admin()`.
 - **No HTTPS termination** — put a reverse proxy in front if exposed beyond a trusted local network.
 

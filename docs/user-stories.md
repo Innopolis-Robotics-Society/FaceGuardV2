@@ -20,7 +20,7 @@
 | US-012 | Evaluation quality report | Must Have | [#19](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/19) | Active | To Do |
 | US-013 | Manage temporary access life | Must Have | [#20](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/20)| Active | To Do |
 | US-014 | Proximity single-user focus | Should Have | [#22](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/22) | Active | To Do | — |
-| US-015 | Hardware LED indicators | Should Have | [#23](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/23) | Active | To Do | — |
+| US-015 | Hardware LED indicators | Should Have | [#23](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/issues/23) | Active | Done | — |
 
 ---
 
@@ -68,6 +68,7 @@
 
 **US-015 (Should Have)**
 * **Statement:** As a lab worker, I want external green and red LED indicators driven by the GPIO pins to flash upon access decision, so that I have unmistakable physical status feedback even when looking away from the primary interface screen.
+* **Status note:** Shipped. Implemented in `app/leds.py` (`GpioLEDs` on Raspberry Pi GPIO, `EmulatedLEDs` logging fallback elsewhere), driven from the same verdict as the dashboard overlay: green=granted, red=denied, yellow=liveness check in progress. Configurable via `LED_MODE`, `LED_GREEN_PIN`, `LED_RED_PIN`, `LED_YELLOW_PIN`, `LED_GRANT_DURATION_SEC` (see [configuration.md](configuration.md)).
 
 ---
 

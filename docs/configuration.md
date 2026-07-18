@@ -54,6 +54,18 @@ This page is the authoritative list, kept in sync with `config.py`. `.env.exampl
 | `SERVO_PIN` | `18` | BCM GPIO pin number for the servo signal wire. Only used in `gpio` mode. |
 | `SERVO_OPEN_DURATION_SEC` | `2.0` | How long the servo stays in the open position before auto-returning to closed. Range `0.1`–`30.0`. |
 
+## LEDs
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `LED_MODE` | `emulated` | `gpio` on a Raspberry Pi with LEDs wired up; `emulated` for local development (logs LED state changes instead of driving hardware). If GPIO initialization fails, the backend automatically falls back to `emulated` and logs an error. |
+| `LED_GREEN_PIN` | `27` (`.env.example`) | BCM GPIO pin for the green ("access granted") LED. |
+| `LED_RED_PIN` | `22` (`.env.example`) | BCM GPIO pin for the red ("access denied") LED. |
+| `LED_YELLOW_PIN` | `17` (`.env.example`) | BCM GPIO pin for the yellow ("liveness check in progress") LED. |
+| `LED_GRANT_DURATION_SEC` | `3.0` | How long the green LED stays on after an access grant before auto turning off. Range `0.5`–`30.0`. |
+
+**Note:** `app/config.py`'s built-in field defaults for the three pin variables (`17`/`27`/`22` for green/red/yellow respectively) do not match the values shipped in `.env.example` (`27`/`22`/`17`). Since `docker compose` and local runs both load `.env`, the `.env.example`-derived values above are what actually apply out of the box — but the mismatched in-code defaults are worth reconciling so a deployment without an `.env` file doesn't silently wire the wrong color to the wrong pin.
+
 ## Liveness detection
 
 | Variable | Default | Purpose |
