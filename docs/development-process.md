@@ -1,5 +1,7 @@
 # Development Process and Configuration Management
 
+> **For course/internal use.** This document describes the team's course workflow and is not customer-facing product documentation. For product setup, architecture, and usage, see the documentation index in the root [README.md](../README.md).
+
 **Since:** Assignment 5  
 **Status:** Maintained canonical process artifact  
 **Scope:** FaceGuardV2 product repository

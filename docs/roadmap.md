@@ -1,6 +1,8 @@
 # Roadmap - FaceGuardV2
 
-**Product Goal:** Face recognition access control system on Raspberry Pi 5
+> **For course/internal use.** This is a course sprint-planning artifact, not customer-facing product documentation. For product setup, architecture, and usage, see the documentation index in the root [README.md](../README.md).
+
+**Product Goal:** Face recognition access control system on Raspberry Pi 4
 with local user registration and access logging.
 
 ---
