@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- LED status indicators (`app/leds.py`): green on access granted, red on access denied, yellow while a liveness check is pending, all off when idle. Real GPIO on Raspberry Pi (`LED_MODE=gpio`) or logged/emulated elsewhere. Configurable via `LED_MODE`, `LED_GREEN_PIN`, `LED_RED_PIN`, `LED_YELLOW_PIN`, `LED_GRANT_DURATION_SEC`.
+
+### Changed
+- Redesigned the admin UI (login, dashboard, users list) for better color consistency, readability, and layout.
+- Optimized ML service background processing on Raspberry Pi.
+- Iterated again on the liveness-detection landmark model to improve blink-detection accuracy.
+
+### Fixed
+- Fixed Delete/Revoke button sizing, alignment, and column layout in the users table.
+- Fixed login navigation, video letterboxing, access-type toggle, and logout alignment issues.
+- Fixed a blink-counter bug in liveness detection.
+- Cleaned up backend code and miscellaneous frontend bugs.
+
 ## [2.1.0] - 2026-07-12
 [2.1.0]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v2.1.0
 
