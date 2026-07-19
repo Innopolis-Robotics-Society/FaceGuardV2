@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
+## [3.0.0] - 2026-07-19
+[3.0.0]: https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/tag/v3.0.0
 ### Added
 - LED status indicators (`app/leds.py`): green on access granted, red on access denied, yellow while a liveness check is pending, all off when idle. Real GPIO on Raspberry Pi (`LED_MODE=gpio`) or logged/emulated elsewhere. Configurable via `LED_MODE`, `LED_GREEN_PIN`, `LED_RED_PIN`, `LED_YELLOW_PIN`, `LED_GRANT_DURATION_SEC`.
 
@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redesigned the admin UI (login, dashboard, users list) for better color consistency, readability, and layout.
 - Optimized ML service background processing on Raspberry Pi.
 - Iterated again on the liveness-detection landmark model to improve blink-detection accuracy.
+- Changed model for liveness detection from Mediapipe Face Mesh to PFLD.
 
 ### Fixed
 - Fixed Delete/Revoke button sizing, alignment, and column layout in the users table.
