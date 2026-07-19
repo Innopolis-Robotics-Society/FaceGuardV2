@@ -4,7 +4,7 @@ from pathlib import Path
 from itertools import combinations
 
 BASE_DIR = Path(__file__).parent
-TARGET_MODEL = 'buffalo_m'  # Поменяй на buffalo_l/m/sc для анализа других моделей
+TARGET_MODEL = 'buffalo_sc'
 EMBEDDINGS_DIR = BASE_DIR / "dataset" / "embeddings" / TARGET_MODEL
 OUTPUT_CSV = BASE_DIR / f"threshold_{TARGET_MODEL}.csv"
 
