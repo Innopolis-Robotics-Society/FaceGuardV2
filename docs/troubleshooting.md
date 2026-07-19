@@ -45,6 +45,13 @@ Common problems when running or deploying FaceGuardV2, and what to check first.
 
 - Expected — `SERVO_MODE=emulated` (the default for non-Pi setups) only shows the "triggered" state in the dashboard status panel; there is no real hardware to move.
 
+## LEDs don't light up (Raspberry Pi)
+
+- Confirm `LED_MODE=gpio` in `.env` — if it's still `emulated` (the default), state transitions are only logged, not shown on physical LEDs.
+- Check the wiring against [deployment-raspberry-pi.md §2](deployment-raspberry-pi.md#2-wire-the-servo): each LED's signal pin → configured BCM pin (`LED_GREEN_PIN`/`LED_RED_PIN`/`LED_YELLOW_PIN`) through a resistor → GND.
+- If GPIO initialization fails for any reason, the backend automatically falls back to `emulated` mode and logs an error — check `docker compose logs backend` for a message like "GPIO LEDs failed, falling back to emulated".
+- LEDs are a status convenience only — recognition, logging, and the servo work normally even if the LEDs never light up.
+
 ## Liveness / blink check seems to block valid users
 
 - Confirm you're actually blinking naturally while looking at the camera — the check requires a detected blink within a few seconds.

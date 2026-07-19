@@ -11,6 +11,7 @@ For a quick local demo without any hardware, see [getting-started.md](getting-st
 | Raspberry Pi 4 (2 GB RAM or more) | Raspberry Pi OS, 64-bit recommended. |
 | Compatible camera | USB webcam or Raspberry Pi Camera Module exposed as `/dev/video0`. |
 | SG90-class servo | Or an equivalent small hobby servo used to actuate the door latch. |
+| 3× LEDs (green/red/yellow) + resistors | Optional status indicators — green (granted), red (denied), yellow (liveness check pending). The system works fully without them (`LED_MODE=emulated`). |
 | microSD card, 16 GB+ | For the OS and Docker images. |
 | **External 5V power supply for the servo** | Recommended. Powering the servo from the Pi's own 5V rail works for light loads, but can brown out the Pi under load — see [servo.py](../MVP_v1/app/servo.py) comments. If you see the Pi rebooting or the camera dropping out when the door unlocks, move the servo's VCC to a separate 5V supply with a shared ground. |
 
@@ -23,6 +24,8 @@ For a quick local demo without any hardware, see [getting-started.md](getting-st
 | GND (brown/black) | GND (physical pin 6) |
 
 The signal pin is configurable via `SERVO_PIN` (default `18`, BCM numbering) if you need to wire it elsewhere.
+
+Optionally, wire three LEDs the same way (signal pin → BCM pin, through a resistor, to GND) for status indication: green (`LED_GREEN_PIN`, default BCM 27), red (`LED_RED_PIN`, default BCM 22), yellow (`LED_YELLOW_PIN`, default BCM 17). They're purely a convenience — leave `LED_MODE=emulated` (the default) to skip wiring them; the system logs the same state transitions instead of lighting anything.
 
 Connect the camera (USB webcam, or Pi Camera Module via a CSI-to-USB/V4L2 adapter) so it is visible as `/dev/video0`. Check with:
 
@@ -66,6 +69,8 @@ Edit `.env` and set at minimum:
 SERVO_MODE=gpio
 SERVO_PIN=18
 SERVO_OPEN_DURATION_SEC=2.0
+
+LED_MODE=gpio
 
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=<a strong password — do not leave the default>
@@ -121,6 +126,7 @@ Work through this checklist before considering the deployment done:
 | Recognition works | Present the registered person to the camera | Overlay shows `Access granted: <name>`, an entry appears in `/logs`. |
 | Unknown face is denied | Present an unregistered face | Overlay shows `Access denied: Unknown`, door stays locked. |
 | Servo actuates | Successful recognition | Servo physically rotates open for `SERVO_OPEN_DURATION_SEC` seconds, then returns to closed. |
+| LEDs react (if wired, `LED_MODE=gpio`) | Present a registered vs. unregistered face | Yellow while a liveness check is pending, green on grant (auto-off after `LED_GRANT_DURATION_SEC`), red on denial, all off when idle. |
 
 If any step fails, see [troubleshooting.md](troubleshooting.md).
 

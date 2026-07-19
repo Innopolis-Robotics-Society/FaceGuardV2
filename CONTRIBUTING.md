@@ -170,3 +170,5 @@ For Assignment 6 and later handover work, treat the public repository entry poin
 * `docs/customer-handover.md`
 * `CONTRIBUTING.md`
 * `AGENTS.md`
+* `reports/week6/README.md`
+* `reports/week7/README.md`
