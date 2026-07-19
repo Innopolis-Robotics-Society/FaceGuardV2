@@ -149,6 +149,7 @@ summary of that evidence.
 - Composed presentation
 - Recorded video demonstration
 - Prepared hardware
+- Rehearsed the presentation with time and roles
 
 ---
 
