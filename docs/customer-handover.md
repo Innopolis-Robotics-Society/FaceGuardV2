@@ -53,6 +53,7 @@ The repository is public and contains sanitized product code, documentation, rep
 - Raspberry Pi deployment: [deployment-raspberry-pi.md](deployment-raspberry-pi.md)
 - Day-to-day usage of the admin UI: [user-guide.md](user-guide.md)
 - All configuration options: [configuration.md](configuration.md)
+- Data backup / recovery: [deployment-raspberry-pi.md, §9](deployment-raspberry-pi.md#9-data-persistence) (where the database lives and what to back up before any destructive operation)
 - If something isn't working: [troubleshooting.md](troubleshooting.md)
 
 The ML service is internal and not intended to be used directly by the customer — the admin web UI is the customer-facing interface.
@@ -71,6 +72,7 @@ The customer must keep private: the admin password, session `SECRET_KEY`, privat
 - Real deployment requires controlled lighting, stable camera placement, and hardware testing; recognition quality depends on camera quality, registration sample quality, threshold tuning, and ML service behavior.
 - HTTPS termination is not provided by the application itself — handle it at the deployment/infrastructure layer if needed.
 - Multi-admin operational management is limited (single bootstrapped admin account).
+- Liveness (blink-check) sensitivity is currently hardcoded in the ML service rather than fully controlled by the documented `.env` liveness variables — see [troubleshooting.md](troubleshooting.md) ("Liveness / blink check seems to block valid users") if it seems too strict or too loose.
 - Long-term deployment and operation on customer-owned infrastructure (e.g. the physical lab door) has not yet been confirmed; the Week 7 trial ran on the team's Raspberry Pi deployment.
 - Final customer acceptance was confirmed during Week 7 (see [§2](#2-current-handover-status)).
 
