@@ -24,11 +24,11 @@ We confirmed that the `.env`-driven configuration and `SERVO_MODE=emulated` fall
 
 The primary blocker discovered during the trial release was non-functional liveness detection on Raspberry Pi. The same code that rejected static photos on x86 failed silently on the Pi because the camera stream delivered frames at a lower rate than the challenge timer expected. This was resolved by widening the blink-detection window and lowering the inference frequency, but the debugging cycle consumed a full day.
 
-Low video-stream FPS was the second major friction point. The raw camera feed was usable for debugging but not for a smooth user experience. We traced the bottleneck to unthrottled frame processing in the recognition loop and are now implementing a dedicated streaming thread with reduced resolution.
+Low video-stream FPS was the second major friction point. The raw camera feed was usable for debugging but not for a smooth user experience. We traced the bottleneck to unthrottled frame processing in the recognition loop and implemented a dedicated streaming thread with reduced resolution.
 
 The web UI design was flagged as poor during the documentation review. The HTML templates and CSS from `MVP v2` are functional but visually inconsistent and not mobile-friendly. This gap does not block deployment, but it directly affects the customer-facing impression of the product.
 
-Backend optimisation is still in progress. Several hot paths in the CRUD layer and the recognition loop have been profiled, but the refactor PRs have not yet been merged. We are keeping the changes small and reviewable to avoid destabilising the release branch.
+Backend optimisation was still in progress at the end of Week 6. Several hot paths in the CRUD layer and the recognition loop had been profiled, but the refactor PRs had not yet been merged. We kept the changes small and reviewable to avoid destabilising the release branch.
 
 ## Planned response
 
@@ -40,7 +40,7 @@ The team will redesign the web UI templates and CSS to improve visual consistenc
 
 The team will keep the liveness-detection parameters tunable via environment variables (`LIVENESS_WINDOW`, `BLINK_THRESHOLD`) and document them in `docs/development-process.md` and the root `README.md`.
 
-The team will prepare `MVP v3` for final delivery once the FPS, UI, and backend optimisation items are closed. The release will be tagged and the CHANGELOG updated in the same PR.
+The team will prepare the final product delivery once the FPS, UI, and backend optimisation items are closed. The release will be tagged and the CHANGELOG updated in the same PR.
 
 Relevant links:
 
