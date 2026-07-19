@@ -25,6 +25,8 @@ The dashboard is the main screen, showing:
 
   The "Door" and "Servo" fields both react to the same verdict but show different things: "Door" reflects the access decision (`Locked` in grey/yellow/red depending on why, or `Opened` in green), while "Servo" only reflects the physical actuator (`Idle` or `Triggered`) and is not colour-coded — see [interface.md, §1](interface.md#1-live-display-web) for the full state-by-state breakdown across the camera overlay, door status, and servo status.
 
+  On Raspberry Pi hardware with LEDs wired (`LED_MODE=gpio`), the same verdicts are also shown on physical status LEDs next to the door: yellow while a liveness check is pending, green on access granted, red on access denied, all off when idle.
+
 Updates arrive live over Server-Sent Events — the page does not need to be refreshed.
 
 ## Registering a person (`/register`)

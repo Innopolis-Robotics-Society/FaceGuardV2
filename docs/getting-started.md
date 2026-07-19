@@ -56,8 +56,8 @@ Log in with `ADMIN_USERNAME` (default `admin`) and the `ADMIN_PASSWORD` you set 
 
 1. Go to the dashboard (`/`) — you should see your webcam feed with a `Waiting for face...` overlay.
 2. Go to `/register`, fill in a name, choose **Permanent**, and click **Capture & register**. Look at the camera while it captures 5 frames.
-3. Go back to the dashboard (`/`) — looking at the camera again should show `Access granted: <your name>` and the simulated servo will show as "triggered" for a couple of seconds.
-4. Have someone else (or step out of frame and use a photo) show their face — it should show `Access denied: Unknown`.
+3. Go back to the dashboard (`/`) — looking at the camera again should match you. `.env.example` ships with `LIVENESS_ENABLED=true`, so the overlay will first show `Liveness check: please blink` — blink naturally and it switches to `Access granted: <your name>`, with the simulated servo showing as "triggered" for a couple of seconds. (Set `LIVENESS_ENABLED=false` in `.env` to skip the blink check and grant access immediately.)
+4. Have someone else (or step out of frame and use a photo) show their face — it should show `Access denied: Unknown` (a static photo should also fail the liveness check if enabled).
 5. Check `/logs` — both attempts should be recorded.
 
 ## 5. Next steps

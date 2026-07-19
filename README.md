@@ -5,6 +5,7 @@ FaceGuardV2 is a face-recognition access-control system for a laboratory door. I
 ## Current product access
 
 * **Current product release:** [Latest GitHub Release](https://github.com/Innopolis-Robotics-Society/FaceGuardV2/releases/latest)
+* **Full documentation site:** [FaceGuardV2 Docs](https://b3ss0n.github.io/FaceGuardV2DocsWebsite/)
 * **Get started:** [docs/getting-started.md](docs/getting-started.md)
 * **Deploy on Raspberry Pi:** [docs/deployment-raspberry-pi.md](docs/deployment-raspberry-pi.md)
 * **Handover status and support scope:** [docs/customer-handover.md](docs/customer-handover.md)
@@ -19,7 +20,7 @@ FaceGuardV2 is a customer-usable access-control prototype providing:
 * face-recognition decision flow using stored embeddings, with optional liveness (blink) checking;
 * access audit logging;
 * user and guest management (web UI + JSON API);
-* servo actuation in GPIO mode on Raspberry Pi 4, or emulated mode for local development;
+* servo actuation and LED status indicators (granted / denied / liveness-pending) in GPIO mode on Raspberry Pi 4, or emulated mode for local development;
 * Docker Compose based local and Raspberry Pi deployment.
 
 Historical prototype code is kept in `MVP_v0/`. The maintained backend and web admin product lives in `MVP_v1/`.
@@ -41,6 +42,7 @@ Then open `http://localhost:8000/login`. See [docs/getting-started.md](docs/gett
 
 | Need | Document |
 | --- | --- |
+| Browse all documentation in one place | [Hosted documentation site](https://b3ss0n.github.io/FaceGuardV2DocsWebsite/) |
 | Quick local demo | [docs/getting-started.md](docs/getting-started.md) |
 | Raspberry Pi 4 deployment | [docs/deployment-raspberry-pi.md](docs/deployment-raspberry-pi.md) |
 | How the system is put together | [docs/architecture.md](docs/architecture.md) |
